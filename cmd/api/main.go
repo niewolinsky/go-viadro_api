@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"viadro_api/internal/data"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const version = "0.1.0"
@@ -26,21 +26,13 @@ type application struct {
 	data_access data.Layers
 }
 
-func openDB(cfg config) (*sql.DB, error) {
-	db, err := sql.Open("postgres", cfg.db.dsn)
+func openDB(cfg config) (*pgxpool.Pool, error) {
+	dbpool, err := pgxpool.New(context.Background(), cfg.db.dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	return dbpool, nil
 }
 
 func main() {
@@ -49,7 +41,7 @@ func main() {
 	{
 		flag.IntVar(&cfg.port, "port", 4000, "API server port")
 		flag.StringVar(&cfg.env, "env", "development", "Environment (development|production)")
-		flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
+		flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://viadro:haslo456@localhost/viadro_db", "PostgreSQL DSN")
 
 		flag.Parse()
 	}

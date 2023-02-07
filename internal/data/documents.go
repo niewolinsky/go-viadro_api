@@ -1,8 +1,9 @@
 package data
 
 import (
-	"database/sql"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Document struct {
@@ -11,5 +12,5 @@ type Document struct {
 }
 
 type DocumentLayer struct {
-	DB *sql.DB
+	DB *pgxpool.Pool
 }
