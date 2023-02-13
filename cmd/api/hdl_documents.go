@@ -18,7 +18,7 @@ import (
 func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	documents, err := app.data_access.Documents.GetAll()
 	if err != nil {
-		fmt.Println("Server error 1")
+		fmt.Println(err)
 		return
 	}
 
@@ -37,7 +37,11 @@ func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Requ
 // @Router       /documents [post]
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Title string `json:"title"`
+		Url_s3     string   `json:"url_s3"`
+		Filetype   string   `json:"filetype"`
+		Title      string   `json:"title"`
+		Tags       []string `json:"tags"`
+		Is_private bool     `json:"is_private"`
 	}
 
 	err := utils.ReadJSON(w, r, &input)
@@ -46,13 +50,21 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	fmt.Println(input)
+
 	document := &data.Document{
-		Title: input.Title,
+		Url_s3:     input.Url_s3,
+		Filetype:   input.Filetype,
+		Title:      input.Title,
+		Tags:       input.Tags,
+		Is_private: input.Is_private,
 	}
+
+	fmt.Println(document)
 
 	err = app.data_access.Documents.Insert(document)
 	if err != nil {
-		fmt.Println("Server error")
+		fmt.Println(err)
 		return
 	}
 
@@ -89,5 +101,31 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"message": "document successfully deleted"}, nil)
 	if err != nil {
 		fmt.Println("Server error")
+	}
+}
+
+// listDocumentsHandler godoc
+// @Summary      get details of one public documents
+// @Description  get details of one public documents
+// @Tags         documents
+// @Accept       json
+// @Produce      json
+// @Router       /documents/:id [get]
+func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := utils.ReadIDParam(r)
+	fmt.Println(id)
+	if err != nil {
+		fmt.Println("Not found")
+		return
+	}
+
+	document, err := app.data_access.Documents.Get(id)
+	if err != nil {
+		fmt.Println("Bad request")
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": document}, nil)
+	if err != nil {
+		fmt.Println("Server error 2")
 	}
 }

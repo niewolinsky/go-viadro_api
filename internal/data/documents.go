@@ -9,8 +9,14 @@ import (
 )
 
 type Document struct {
-	Document_id int64  `json:"id"`
-	Title       string `json:"title"`
+	Document_id int64     `json:"document_id"`
+	User_id     int64     `json:"user_id"`
+	Url_s3      string    `json:"url_s3"`
+	Filetype    string    `json:"filetype"`
+	Created_at  time.Time `json:"created_at"`
+	Title       string    `json:"title"`
+	Tags        []string  `json:"tags"`
+	Is_private  bool      `json:"is_private"`
 }
 
 type DocumentLayer struct {
@@ -33,24 +39,53 @@ func (d DocumentLayer) Delete(id int64) error {
 
 func (d DocumentLayer) Insert(document *Document) error {
 	query := `
-		INSERT INTO documents (title)
-		VALUES ($1)
-		RETURNING document_id
-		`
+		INSERT INTO documents (filetype, title, tags, is_private, url_s3)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING document_id, created_at
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := []interface{}{document.Title}
+	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_private, document.Url_s3}
 
-	return d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id)
+	return d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id, &document.Created_at)
+}
+
+func (d DocumentLayer) Get(id int64) (*Document, error) {
+	query := `
+		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_private
+		FROM documents
+		WHERE document_id = $1
+		`
+
+	document := Document{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := d.DB.QueryRow(ctx, query, id).Scan(
+		&document.Document_id,
+		&document.User_id,
+		&document.Url_s3,
+		&document.Filetype,
+		&document.Created_at,
+		&document.Title,
+		&document.Tags,
+		&document.Is_private,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &document, nil
 }
 
 func (d DocumentLayer) GetAll() ([]Document, error) {
 	query := `
-		SELECT document_id, title
+		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_private
 		FROM documents
-		`
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -67,7 +102,13 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 		document := Document{}
 		err := rows.Scan(
 			&document.Document_id,
+			&document.User_id,
+			&document.Url_s3,
+			&document.Filetype,
+			&document.Created_at,
 			&document.Title,
+			&document.Tags,
+			&document.Is_private,
 		)
 		if err != nil {
 			fmt.Println(err)
