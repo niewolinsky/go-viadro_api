@@ -1,4 +1,5 @@
 bin/
 tls/
+tmp/
 vendor/
 *.env

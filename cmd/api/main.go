@@ -41,7 +41,7 @@ func main() {
 	{
 		flag.IntVar(&cfg.port, "port", 4000, "API server port")
 		flag.StringVar(&cfg.env, "env", "development", "Environment (development|production)")
-		flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://viadro:haslo456@localhost/viadro_db", "PostgreSQL DSN")
+		flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://viadro:haslo456@localhost/viadro_db?sslmode=disable", "PostgreSQL DSN")
 
 		flag.Parse()
 	}
