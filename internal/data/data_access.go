@@ -1,6 +1,8 @@
 package data
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 type Layers struct {
 	Documents DocumentLayer
