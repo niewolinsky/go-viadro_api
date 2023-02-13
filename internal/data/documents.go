@@ -123,3 +123,31 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 
 	return documents, nil
 }
+
+func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
+	query := `
+	UPDATE documents
+	SET is_private = NOT is_private
+	WHERE document_id = $1`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	document := Document{}
+
+	//!error???? bug??
+	_ = d.DB.QueryRow(ctx, query, id).Scan(
+		&document.Document_id,
+		&document.User_id,
+		&document.Url_s3,
+		&document.Filetype,
+		&document.Created_at,
+		&document.Title,
+		&document.Tags,
+		&document.Is_private,
+	)
+
+	fmt.Println(document)
+
+	return &document, nil
+}

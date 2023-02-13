@@ -129,3 +129,22 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 		fmt.Println("Server error 2")
 	}
 }
+
+func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := utils.ReadIDParam(r)
+	if err != nil {
+		fmt.Println("Not found")
+		return
+	}
+
+	document, err := app.data_access.Documents.ToggleVisibility(id)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": document}, nil)
+	if err != nil {
+		fmt.Println("Server error 2")
+	}
+}

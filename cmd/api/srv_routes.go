@@ -16,6 +16,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodGet, "/v1/documents", app.listDocumentsHandler)
 	router.HandlerFunc(http.MethodGet, "/v1/documents/:id", app.getDocumentHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/documents/:id", app.deleteDocumentHandler)
+	router.HandlerFunc(http.MethodPatch, "/v1/documents/:id", app.toggleDocumentVisibilityHandler)
 
 	return router
 }
