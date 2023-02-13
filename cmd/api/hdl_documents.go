@@ -8,6 +8,13 @@ import (
 	"viadro_api/utils"
 )
 
+// listDocumentsHandler godoc
+// @Summary      get all public documents
+// @Description  get all public documents
+// @Tags         documents
+// @Accept       json
+// @Produce      json
+// @Router       /documents [get]
 func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	documents, err := app.data_access.Documents.GetAll()
 	if err != nil {
@@ -21,6 +28,13 @@ func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// addDocumentsHandler godoc
+// @Summary      add one document
+// @Description  add one document
+// @Tags         documents
+// @Accept       json
+// @Produce      json
+// @Router       /documents [post]
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Title string `json:"title"`
@@ -52,6 +66,13 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// deleteDocumentHandler godoc
+// @Summary      delete one document
+// @Description  delete one document
+// @Tags         documents
+// @Accept       json
+// @Produce      json
+// @Router       /documents/:id [delete]
 func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	fmt.Println(id)

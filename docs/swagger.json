@@ -1,7 +1,68 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "Open-source document hosting solution",
+        "title": "Viadro API",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "version": "0.1.0"
     },
-    "paths": {}
+    "host": "localhost:4000",
+    "basePath": "/v1/",
+    "paths": {
+        "/documents": {
+            "get": {
+                "description": "get all public documents",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "get all public documents",
+                "responses": {}
+            },
+            "post": {
+                "description": "add one document",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "add one document",
+                "responses": {}
+            }
+        },
+        "/documents/:id": {
+            "delete": {
+                "description": "delete one document",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "delete one document",
+                "responses": {}
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BasicAuth": {
+            "type": "basic"
+        }
+    }
 }

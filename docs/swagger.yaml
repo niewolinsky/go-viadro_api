@@ -1,4 +1,47 @@
+basePath: /v1/
+host: localhost:4000
 info:
-  contact: {}
-paths: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Open-source document hosting solution
+  title: Viadro API
+  version: 0.1.0
+paths:
+  /documents:
+    get:
+      consumes:
+      - application/json
+      description: get all public documents
+      produces:
+      - application/json
+      responses: {}
+      summary: get all public documents
+      tags:
+      - documents
+    post:
+      consumes:
+      - application/json
+      description: add one document
+      produces:
+      - application/json
+      responses: {}
+      summary: add one document
+      tags:
+      - documents
+  /documents/:id:
+    delete:
+      consumes:
+      - application/json
+      description: delete one document
+      produces:
+      - application/json
+      responses: {}
+      summary: delete one document
+      tags:
+      - documents
+securityDefinitions:
+  BasicAuth:
+    type: basic
 swagger: "2.0"

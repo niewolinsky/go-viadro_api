@@ -35,6 +35,18 @@ func openDB(cfg config) (*pgxpool.Pool, error) {
 	return dbpool, nil
 }
 
+// @title           Viadro API
+// @version         0.1.0
+// @description     Open-source document hosting solution
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @host      localhost:4000
+// @BasePath  /v1/
+
+// @securityDefinitions.basic  BasicAuth
 func main() {
 	cfg := config{}
 

@@ -9,22 +9,78 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/documents": {
+            "get": {
+                "description": "get all public documents",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "get all public documents",
+                "responses": {}
+            },
+            "post": {
+                "description": "add one document",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "add one document",
+                "responses": {}
+            }
+        },
+        "/documents/:id": {
+            "delete": {
+                "description": "delete one document",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "delete one document",
+                "responses": {}
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BasicAuth": {
+            "type": "basic"
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
-	Host:             "",
-	BasePath:         "",
+	Version:          "0.1.0",
+	Host:             "localhost:4000",
+	BasePath:         "/v1/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "Viadro API",
+	Description:      "Open-source document hosting solution",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }
