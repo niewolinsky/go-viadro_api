@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
 	"viadro_api/internal/data"
 	"viadro_api/utils"
@@ -50,11 +48,12 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		Is_private bool     `json:"is_private"`
 	}
 
-	err := utils.ReadJSON(w, r, &input)
+	file, err := utils.ReadMultipartJSON(w, r, &input)
 	if err != nil {
 		utils.BadRequestResponse(w, r, err)
 		return
 	}
+	defer file.Close()
 
 	document := &data.Document{
 		Url_s3:     input.Url_s3,
@@ -63,6 +62,19 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		Tags:       input.Tags,
 		Is_private: input.Is_private,
 	}
+
+	res, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String("viadro-api"),
+		Key:    aws.String(document.Title),
+		Body:   file,
+		ACL:    "public-read",
+	})
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	document.Url_s3 = res.Location
 
 	err = app.data_access.Documents.Insert(document)
 	if err != nil {
@@ -154,31 +166,27 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(32 << 20) // maxMemory 32MB
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
-	//Access the photo key - First Approach
-	_, h, err := r.FormFile("photo")
+	file, _, err := r.FormFile("document")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
+	defer file.Close()
 
-	f, openErr := os.Open(h.Filename)
-	if openErr != nil {
-		fmt.Println("not working")
-		os.Exit(1)
-	}
-
+	//!bugged, not opening in browser but downloading as attachment
 	response, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String("pdfrain-sandbox-s3"),
-		Key:    aws.String("cv-przemyslaw-niewolinski-en.pdf"),
-		Body:   f,
+		Bucket: aws.String("viadro-api"),
+		Key:    aws.String("sample_pdf.pdf"),
+		Body:   file,
 		ACL:    "public-read",
 	})
 	if err != nil {
-		log.Fatalf("failed to init uploader, %v", err)
+		utils.ServerErrorResponse(w, r, err)
+		return
 	}
 	fmt.Println(response.Location)
 
