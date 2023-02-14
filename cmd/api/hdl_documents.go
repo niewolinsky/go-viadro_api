@@ -1,11 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"viadro_api/internal/data"
 	"viadro_api/utils"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // listDocumentsHandler godoc
@@ -143,4 +149,38 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}
+}
+
+func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(32 << 20) // maxMemory 32MB
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	//Access the photo key - First Approach
+	_, h, err := r.FormFile("photo")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	f, openErr := os.Open(h.Filename)
+	if openErr != nil {
+		fmt.Println("not working")
+		os.Exit(1)
+	}
+
+	response, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String("pdfrain-sandbox-s3"),
+		Key:    aws.String("cv-przemyslaw-niewolinski-en.pdf"),
+		Body:   f,
+		ACL:    "public-read",
+	})
+	if err != nil {
+		log.Fatalf("failed to init uploader, %v", err)
+	}
+	fmt.Println(response.Location)
+
+	w.WriteHeader(200)
 }

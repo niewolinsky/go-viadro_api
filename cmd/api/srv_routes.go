@@ -18,5 +18,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/documents/:id", app.deleteDocumentHandler)
 	router.HandlerFunc(http.MethodPatch, "/v1/documents/:id", app.toggleDocumentVisibilityHandler)
 
+	router.HandlerFunc(http.MethodPost, "/v1/awstest", app.s3Test)
+
 	return router
 }

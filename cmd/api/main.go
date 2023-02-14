@@ -4,11 +4,14 @@ import (
 	"viadro_api/config"
 	"viadro_api/internal/data"
 	"viadro_api/internal/logger"
+
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 )
 
 type application struct {
 	config      config.Config
 	data_access data.Layers
+	s3_manager  *manager.Uploader
 }
 
 // @title           Viadro API
@@ -21,12 +24,13 @@ type application struct {
 // @BasePath  /v1/
 // @securityDefinitions.basic  BasicAuth
 func main() {
-	db_postgre, cfg := config.InitConfig()
+	aws_s3_manager, db_postgre, cfg := config.InitConfig()
 	defer db_postgre.Close()
 
 	app := &application{
 		config:      cfg,
 		data_access: data.NewLayers(db_postgre),
+		s3_manager:  aws_s3_manager,
 	}
 
 	err := app.serve()
