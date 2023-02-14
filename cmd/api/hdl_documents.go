@@ -18,13 +18,13 @@ import (
 func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	documents, err := app.data_access.Documents.GetAll()
 	if err != nil {
-		fmt.Println(err)
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": documents}, nil)
 	if err != nil {
-		fmt.Println("Server error 2")
+		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -46,11 +46,9 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
-		fmt.Println("Bad response")
+		utils.BadRequestResponse(w, r, err)
 		return
 	}
-
-	fmt.Println(input)
 
 	document := &data.Document{
 		Url_s3:     input.Url_s3,
@@ -60,21 +58,18 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		Is_private: input.Is_private,
 	}
 
-	fmt.Println(document)
-
 	err = app.data_access.Documents.Insert(document)
 	if err != nil {
-		fmt.Println(err)
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", document.Document_id))
 
-	fmt.Println(document)
 	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"document": document}, headers)
 	if err != nil {
-		fmt.Println("Server error")
+		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -87,20 +82,21 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 // @Router       /documents/:id [delete]
 func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
-	fmt.Println(id)
 	if err != nil {
-		fmt.Println("Not found")
+		utils.NotFoundResponse(w, r)
 		return
 	}
 
+	//! no error if document does not exist
 	err = app.data_access.Documents.Delete(id)
 	if err != nil {
-		fmt.Println("Bad request")
+		utils.ServerErrorResponse(w, r, err)
+		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"message": "document successfully deleted"}, nil)
 	if err != nil {
-		fmt.Println("Server error")
+		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -113,38 +109,38 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 // @Router       /documents/:id [get]
 func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
-	fmt.Println(id)
 	if err != nil {
-		fmt.Println("Not found")
+		utils.NotFoundResponse(w, r)
 		return
 	}
 
 	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
-		fmt.Println("Bad request")
+		utils.ServerErrorResponse(w, r, err)
+		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": document}, nil)
 	if err != nil {
-		fmt.Println("Server error 2")
+		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
 func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		fmt.Println("Not found")
+		utils.NotFoundResponse(w, r)
 		return
 	}
 
 	document, err := app.data_access.Documents.ToggleVisibility(id)
 	if err != nil {
-		fmt.Println(err)
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": document}, nil)
 	if err != nil {
-		fmt.Println("Server error 2")
+		utils.ServerErrorResponse(w, r, err)
 	}
 }
