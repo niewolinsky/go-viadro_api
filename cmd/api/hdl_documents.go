@@ -41,11 +41,11 @@ func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Requ
 // @Router       /documents [post]
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Url_s3     string   `json:"url_s3"`
-		Filetype   string   `json:"filetype"`
-		Title      string   `json:"title"`
-		Tags       []string `json:"tags"`
-		Is_private bool     `json:"is_private"`
+		Url_s3    string   `json:"url_s3"`
+		Filetype  string   `json:"filetype"`
+		Title     string   `json:"title"`
+		Tags      []string `json:"tags"`
+		Is_hidden bool     `json:"is_hidden"`
 	}
 
 	file, err := utils.ReadMultipartJSON(w, r, &input)
@@ -56,11 +56,11 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	defer file.Close()
 
 	document := &data.Document{
-		Url_s3:     input.Url_s3,
-		Filetype:   input.Filetype,
-		Title:      input.Title,
-		Tags:       input.Tags,
-		Is_private: input.Is_private,
+		Url_s3:    input.Url_s3,
+		Filetype:  input.Filetype,
+		Title:     input.Title,
+		Tags:      input.Tags,
+		Is_hidden: input.Is_hidden,
 	}
 
 	res, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{

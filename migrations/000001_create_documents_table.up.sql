@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS documents (
     user_id integer DEFAULT 0,
     url_s3 text,
     filetype text,
-    created_at timestamp(0) with time zone DEFAULT NOW(),
+    uploaded_at timestamp(0) with time zone DEFAULT NOW(),
 	title text,
 	tags text[],
-    is_private boolean
+    is_hidden boolean
 );

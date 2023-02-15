@@ -16,7 +16,7 @@ type Document struct {
 	Created_at  time.Time `json:"created_at"`
 	Title       string    `json:"title"`
 	Tags        []string  `json:"tags"`
-	Is_private  bool      `json:"is_private"`
+	Is_hidden   bool      `json:"is_hidden"`
 }
 
 type DocumentLayer struct {
@@ -39,7 +39,7 @@ func (d DocumentLayer) Delete(id int64) error {
 
 func (d DocumentLayer) Insert(document *Document) error {
 	query := `
-		INSERT INTO documents (filetype, title, tags, is_private, url_s3)
+		INSERT INTO documents (filetype, title, tags, is_hidden, url_s3)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING document_id, created_at
 	`
@@ -47,14 +47,14 @@ func (d DocumentLayer) Insert(document *Document) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_private, document.Url_s3}
+	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_hidden, document.Url_s3}
 
 	return d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id, &document.Created_at)
 }
 
 func (d DocumentLayer) Get(id int64) (*Document, error) {
 	query := `
-		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_private
+		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_hidden
 		FROM documents
 		WHERE document_id = $1
 		`
@@ -72,7 +72,7 @@ func (d DocumentLayer) Get(id int64) (*Document, error) {
 		&document.Created_at,
 		&document.Title,
 		&document.Tags,
-		&document.Is_private,
+		&document.Is_hidden,
 	)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (d DocumentLayer) Get(id int64) (*Document, error) {
 
 func (d DocumentLayer) GetAll() ([]Document, error) {
 	query := `
-		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_private
+		SELECT document_id, user_id, url_s3, filetype, created_at, title, tags, is_hidden
 		FROM documents
 	`
 
@@ -108,7 +108,7 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 			&document.Created_at,
 			&document.Title,
 			&document.Tags,
-			&document.Is_private,
+			&document.Is_hidden,
 		)
 		if err != nil {
 			fmt.Println(err)
@@ -127,7 +127,7 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 	query := `
 	UPDATE documents
-	SET is_private = NOT is_private
+	SET is_hidden = NOT is_hidden
 	WHERE document_id = $1`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -144,7 +144,7 @@ func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 		&document.Created_at,
 		&document.Title,
 		&document.Tags,
-		&document.Is_private,
+		&document.Is_hidden,
 	)
 
 	fmt.Println(document)
