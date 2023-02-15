@@ -6,10 +6,12 @@ import (
 
 type Layers struct {
 	Documents DocumentLayer
+	Users     UserLayer
 }
 
 func NewLayers(db *pgxpool.Pool) Layers {
 	return Layers{
 		Documents: DocumentLayer{DB: db},
+		Users:     UserLayer{DB: db},
 	}
 }
