@@ -25,7 +25,7 @@ type password struct {
 type User struct {
 	ID        int64     `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
-	Name      string    `json:"name"`
+	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
@@ -56,10 +56,10 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 
 func (u UserLayer) Insert(user *User) error {
 	query := `
-	INSERT INTO users (name, email, password_hash, activated)
+	INSERT INTO users (username, email, password_hash, activated)
 	VALUES ($1, $2, $3, $4)
-	RETURNING id, created_at, version`
-	args := []interface{}{user.Name, user.Email, user.Password.hash, user.Activated}
+	RETURNING id, created_at`
+	args := []interface{}{user.Username, user.Email, user.Password.hash, user.Activated}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

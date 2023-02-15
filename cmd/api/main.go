@@ -6,12 +6,14 @@ import (
 	"viadro_api/internal/logger"
 
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/wneessen/go-mail"
 )
 
 type application struct {
 	config      config.Config
 	data_access data.Layers
 	s3_manager  *manager.Uploader
+	mail_client *mail.Client
 }
 
 // @title           Viadro API
@@ -24,13 +26,14 @@ type application struct {
 // @BasePath  /v1/
 // @securityDefinitions.basic  BasicAuth
 func main() {
-	aws_s3_manager, db_postgre, cfg := config.InitConfig()
+	mail_client, aws_s3_manager, db_postgre, cfg := config.InitConfig()
 	defer db_postgre.Close()
 
 	app := &application{
 		config:      cfg,
 		data_access: data.NewLayers(db_postgre),
 		s3_manager:  aws_s3_manager,
+		mail_client: mail_client,
 	}
 
 	err := app.serve()
