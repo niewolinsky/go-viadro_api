@@ -31,7 +31,7 @@ func PrepareEmail(recipient, templateFile string, data interface{}) (*mail.Msg, 
 
 	m := mail.NewMsg()
 	m.From("design.niewolinsky@gmail.com")
-	m.To("success@simulator.amazonses.com")
+	m.To("design.niewolinsky@gmail.com")
 	m.Subject(subject.String())
 	// m.SetGenHeader("To", recipient)
 	// m.SetGenHeader("From", "design.niewolinsky@gmail.com")

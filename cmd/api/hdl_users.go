@@ -64,12 +64,14 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.mail_client.DialAndSend(email)
-	if err != nil {
-		logger.LogError("Failed to send email", err)
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
+	go func() {
+		err = app.mail_client.DialAndSend(email)
+		if err != nil {
+			logger.LogError("Failed to send email", err)
+			utils.ServerErrorResponse(w, r, err)
+			return
+		}
+	}()
 
 	err = utils.WriteJSON(w, http.StatusAccepted, utils.Wrap{"user": user}, nil)
 	if err != nil {
