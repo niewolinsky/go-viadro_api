@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 	"viadro_api/internal/data"
 	"viadro_api/internal/logger"
 	"viadro_api/internal/mail"
@@ -39,21 +40,14 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// app.background(func() {
-
-	// 	data := map[string]interface{}{
-	// 		"activationToken": token.Plaintext,
-	// 		"userID":          user.ID,
-	// 	}
-
-	// 	err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
-	// 	if err != nil {
-	// 		app.logger.PrintError(err, nil)
-	// 	}
-	// })
+	token, err := app.data_access.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
 
 	data := map[string]interface{}{
-		"activationToken": "asdasdsa",
+		"activationToken": token.Plaintext,
 		"userID":          user.ID,
 	}
 
@@ -80,7 +74,35 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
+}
 
+func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		TokenPlaintext string `json:"token"`
+	}
+
+	err := utils.ReadJSON(w, r, &input)
+	if err != nil {
+		utils.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user, err := app.data_access.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	user.Activated = true
+
+	app.data_access.Users.Update(user)
+
+	app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"user": user}, nil)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {

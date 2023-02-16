@@ -1,14 +1,14 @@
-{{define "subject"}}Welcome to MovieDB!{{end}}
+{{define "subject"}}Viadro - Simple Document Hosting Service - Account Activation{{end}}
 {{define "plainBody"}}
-Hi,
-Thanks for signing up for a MovieDB account. We're excited to have you on board!
+Greetings,
+Thank you for signing up for a Viadro account.
 For future reference, your user ID number is {{.userID}}.
 Please send a request to the `PUT /v1/users/activated` endpoint with the following JSON
 body to activate your account:
 {"token": "{{.activationToken}}"}
 Please note that this is a one-time use token and it will expire in 3 days.
-Thanks,
-The MovieDB Team
+Thank you,
+Viadro Dev Team
 {{end}}
 {{define "htmlBody"}}
 <!doctype html>
@@ -18,8 +18,8 @@ The MovieDB Team
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 <body>
-<p>Hi,</p>
-<p>Thanks for signing up for a Greenlight account. We're excited to have you on board!</p>
+<p>Greetings,</p>
+<p>Thanks for signing up for a Viadro account.</p>
 <p>For future reference, your user ID number is {{.userID}}.</p>
 <p>Please send a request to the <code>PUT /v1/users/activated</code> endpoint with the
 following JSON body to activate your account:</p>
@@ -27,8 +27,8 @@ following JSON body to activate your account:</p>
 {"token": "{{.activationToken}}"}
 </code></pre>
 <p>Please note that this is a one-time use token and it will expire in 3 days.</p>
-<p>Thanks,</p>
-<p>MovieDB Team</p>
+<p>Thank you,</p>
+<p>Viadro Dev Team</p>
 </body>
 </html>
 {{end}}

@@ -96,9 +96,9 @@ func InitConfig() (*mail.Client, *manager.Uploader, *pgxpool.Pool, Config) {
 
 	mail_client, err := initializeMailClient(cfg)
 	if err != nil {
-		logger.LogFatal("failed initializing aws s3 manager", err)
+		logger.LogFatal("failed initializing mail client", err)
 	}
-	logger.LogInfo("aws s3 manager initialized")
+	logger.LogInfo("mail client initialized")
 
 	return mail_client, aws_s3_manager, db_postgre, cfg
 }

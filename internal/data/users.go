@@ -2,6 +2,8 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 
 var (
 	ErrDuplicateEmail = errors.New("duplicate email")
+	ErrRecordNotFound = errors.New("record not found")
 )
 
 type UserLayer struct {
@@ -74,4 +77,59 @@ func (u UserLayer) Insert(user *User) error {
 	}
 
 	return nil
+}
+
+func (u UserLayer) Update(user *User) {
+	query := `
+	UPDATE users
+	SET username = $1, email = $2, password_hash = $3, activated = $4
+	WHERE id = $5`
+	args := []interface{}{
+		user.Username,
+		user.Email,
+		user.Password.hash,
+		user.Activated,
+		user.ID,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = u.DB.QueryRow(ctx, query, args...)
+}
+
+func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+
+	query := `
+	SELECT users.id, users.created_at, users.username, users.email, users.password_hash, users.activated
+	FROM users
+	INNER JOIN tokens
+	ON users.id = tokens.user_id
+	WHERE tokens.hash = $1
+	AND tokens.scope = $2
+	AND tokens.expiry > $3`
+
+	args := []interface{}{tokenHash[:], tokenScope, time.Now()}
+	var user User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := u.DB.QueryRow(ctx, query, args...).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Username,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &user, nil
 }
