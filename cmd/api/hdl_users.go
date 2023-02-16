@@ -73,9 +73,6 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
-}
-
 func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		TokenPlaintext string `json:"token"`
@@ -105,6 +102,49 @@ func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
+func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
+	err := utils.ReadJSON(w, r, &input)
+	if err != nil {
+		utils.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user, err := app.data_access.Users.GetByEmail(input.Email)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	match, err := user.Password.Matches(input.Password)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	if !match {
+		utils.InvalidCredentialsResponse(w, r)
+		return
+	}
+
+	token, err := app.data_access.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"authentication_token": token}, nil)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
+}
+
+func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
 }

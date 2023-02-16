@@ -34,6 +34,12 @@ type User struct {
 	Activated bool      `json:"activated"`
 }
 
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
+}
+
+var AnonymousUser = &User{}
+
 func (p *password) Set(plaintextPassword string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(plaintextPassword), 12)
 	if err != nil {
@@ -131,5 +137,32 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		}
 	}
 
+	return &user, nil
+}
+
+func (u UserLayer) GetByEmail(email string) (*User, error) {
+	query := `
+	SELECT id, created_at, username, email, password_hash, activated
+	FROM users
+	WHERE email = $1`
+	var user User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := u.DB.QueryRow(ctx, query, email).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Username,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
 	return &user, nil
 }
