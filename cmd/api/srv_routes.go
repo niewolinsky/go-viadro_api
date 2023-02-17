@@ -13,8 +13,8 @@ func (app *application) routes() http.Handler {
 	router.Handle(http.MethodGet, "/v1/documentation/:any", app.documentationHandler)
 
 	router.HandlerFunc(http.MethodPost, "/v1/documents", app.requireActivatedUser(app.addDocumentHandler))
-	router.HandlerFunc(http.MethodGet, "/v1/documents", app.requireActivatedUser(app.listDocumentsHandler))
-	router.HandlerFunc(http.MethodGet, "/v1/documents/:id", app.requireActivatedUser(app.getDocumentHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/documents", app.listDocumentsHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/documents/:id", app.getDocumentHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/documents/:id", app.requireActivatedUser(app.deleteDocumentHandler))
 	router.HandlerFunc(http.MethodPatch, "/v1/documents/:id", app.requireActivatedUser(app.toggleDocumentVisibilityHandler))
 
