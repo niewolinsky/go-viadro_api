@@ -16,6 +16,7 @@ const userContextKey = contextKey("user")
 
 func (app *application) contextSetUser(r *http.Request, user *data.User) *http.Request {
 	ctx := context.WithValue(r.Context(), userContextKey, user)
+
 	return r.WithContext(ctx)
 }
 
@@ -24,12 +25,12 @@ func (app *application) contextGetUser(r *http.Request) *data.User {
 	if !ok {
 		panic("missing user value in request context")
 	}
+
 	return user
 }
 
 func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		w.Header().Add("Vary", "Authorization")
 
 		authorizationHeader := r.Header.Get("Authorization")
@@ -72,19 +73,19 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 			utils.AuthenticationRequiredResponse(w, r)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
 
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
-
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
-
 		if !user.Activated {
 			utils.InactiveAccountResponse(w, r)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 

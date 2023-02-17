@@ -2,7 +2,6 @@ package data
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,14 +24,17 @@ type DocumentLayer struct {
 
 func (d DocumentLayer) Delete(id int64) error {
 	query := `
-	DELETE FROM documents
-	WHERE document_id = $1`
+		DELETE FROM documents
+		WHERE document_id = $1
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	result := d.DB.QueryRow(ctx, query, id)
-	fmt.Println("Result:", result)
+	_, err := d.DB.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -49,7 +51,12 @@ func (d DocumentLayer) Insert(document *Document) error {
 
 	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_hidden, document.Url_s3}
 
-	return d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id, &document.Uploaded_at)
+	err := d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id, &document.Uploaded_at)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d DocumentLayer) Get(id int64) (*Document, error) {
@@ -57,12 +64,12 @@ func (d DocumentLayer) Get(id int64) (*Document, error) {
 		SELECT document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
 		FROM documents
 		WHERE document_id = $1
-		`
-
-	document := Document{}
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+
+	document := Document{}
 
 	err := d.DB.QueryRow(ctx, query, id).Scan(
 		&document.Document_id,
@@ -92,12 +99,12 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 
 	rows, err := d.DB.Query(ctx, query)
 	if err != nil {
-		fmt.Println("error 1")
 		return nil, err
 	}
 	defer rows.Close()
 
 	documents := []Document{}
+
 	for rows.Next() {
 		document := Document{}
 		err := rows.Scan(
@@ -111,13 +118,11 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 			&document.Is_hidden,
 		)
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		documents = append(documents, document)
 	}
 	if err = rows.Err(); err != nil {
-		fmt.Println("error 3")
 		return nil, err
 	}
 
@@ -126,9 +131,10 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 
 func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 	query := `
-	UPDATE documents
-	SET is_hidden = NOT is_hidden
-	WHERE document_id = $1`
+		UPDATE documents
+		SET is_hidden = NOT is_hidden
+		WHERE document_id = $1
+	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -146,8 +152,6 @@ func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 		&document.Tags,
 		&document.Is_hidden,
 	)
-
-	fmt.Println(document)
 
 	return &document, nil
 }

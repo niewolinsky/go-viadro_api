@@ -18,6 +18,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
+		logger.LogError("malformed request json", err)
 		utils.BadRequestResponse(w, r, err)
 		return
 	}
@@ -30,18 +31,21 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	err = user.Password.Set(input.Password)
 	if err != nil {
+		logger.LogError("failed to generate password hash", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = app.data_access.Users.Insert(user)
 	if err != nil {
+		logger.LogError("failed to create new user", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	token, err := app.data_access.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
 	if err != nil {
+		logger.LogError("failed creating activation token", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
@@ -51,9 +55,9 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		"userID":          user.ID,
 	}
 
-	email, err := mail.PrepareEmail(user.Email, "user_welcome.tmpl", data)
+	email, err := mail.PrepareEmail(user.Email, "user_welcome.html", data)
 	if err != nil {
-		logger.LogError("Failed to prepare email", err)
+		logger.LogError("failed to prepare email", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
@@ -61,7 +65,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		err = app.mail_client.DialAndSend(email)
 		if err != nil {
-			logger.LogError("Failed to send email", err)
+			logger.LogError("failed to send email", err)
 			utils.ServerErrorResponse(w, r, err)
 			return
 		}
@@ -69,76 +73,97 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 
 	err = utils.WriteJSON(w, http.StatusAccepted, utils.Wrap{"user": user}, nil)
 	if err != nil {
+		logger.LogError("failed to write response", err)
 		utils.ServerErrorResponse(w, r, err)
+		return
 	}
 }
 
 func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
-	var input struct {
+	input := struct {
 		TokenPlaintext string `json:"token"`
-	}
+	}{}
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
+		logger.LogError("malformed request json", err)
 		utils.BadRequestResponse(w, r, err)
 		return
 	}
 
 	user, err := app.data_access.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
 	if err != nil {
+		logger.LogError("failed retriving token for user", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	user.Activated = true
 
-	app.data_access.Users.Update(user)
+	err = app.data_access.Users.Update(user)
+	if err != nil {
+		logger.LogError("failed updating user activated field", err)
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
 
-	app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	err = app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	if err != nil {
+		logger.LogError("failed deleting activation token for user", err)
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"user": user}, nil)
 	if err != nil {
+		logger.LogError("failed to write response", err)
 		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
 func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request) {
-	var input struct {
+	input := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
-	}
+	}{}
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
+		logger.LogError("malformed request json", err)
 		utils.BadRequestResponse(w, r, err)
 		return
 	}
 
 	user, err := app.data_access.Users.GetByEmail(input.Email)
 	if err != nil {
+		logger.LogError("failed retriving user by email", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	match, err := user.Password.Matches(input.Password)
 	if err != nil {
+		logger.LogError("failed comparing passwords", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	if !match {
+		logger.LogInfo("passwords do not match")
 		utils.InvalidCredentialsResponse(w, r)
 		return
 	}
 
 	token, err := app.data_access.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
+		logger.LogError("failed creating authentication token", err)
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"authentication_token": token}, nil)
 	if err != nil {
+		logger.LogError("failed to write response", err)
 		utils.ServerErrorResponse(w, r, err)
 	}
 }

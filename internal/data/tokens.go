@@ -23,8 +23,11 @@ type Token struct {
 	Scope     string    `json:"-"`
 }
 
-func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
+type TokenLayer struct {
+	DB *pgxpool.Pool
+}
 
+func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token := &Token{
 		UserID: userID,
 		Expiry: time.Now().Add(ttl),
@@ -42,11 +45,8 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 
 	hash := sha256.Sum256([]byte(token.Plaintext))
 	token.Hash = hash[:]
-	return token, nil
-}
 
-type TokenLayer struct {
-	DB *pgxpool.Pool
+	return token, nil
 }
 
 func (t TokenLayer) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
@@ -55,25 +55,46 @@ func (t TokenLayer) New(userID int64, ttl time.Duration, scope string) (*Token, 
 		return nil, err
 	}
 
-	t.Insert(token)
+	err = t.Insert(token)
+	if err != nil {
+		return nil, err
+	}
+
 	return token, nil
 }
 
-func (t TokenLayer) Insert(token *Token) {
+func (t TokenLayer) Insert(token *Token) error {
 	query := `
-	INSERT INTO tokens (hash, user_id, expiry, scope)
-	VALUES ($1, $2, $3, $4)`
+		INSERT INTO tokens (hash, user_id, expiry, scope)
+		VALUES ($1, $2, $3, $4)
+	`
+
 	args := []interface{}{token.Hash, token.UserID, token.Expiry, token.Scope}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	_ = t.DB.QueryRow(ctx, query, args...)
+
+	_, err := t.DB.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (t TokenLayer) DeleteAllForUser(scope string, userID int64) {
+func (t TokenLayer) DeleteAllForUser(scope string, userID int64) error {
 	query := `
-	DELETE FROM tokens
-	WHERE scope = $1 AND user_id = $2`
+		DELETE FROM tokens
+		WHERE scope = $1 AND user_id = $2
+	`
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	_ = t.DB.QueryRow(ctx, query, scope, userID)
+
+	_, err := t.DB.Exec(ctx, query, scope, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

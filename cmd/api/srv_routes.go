@@ -20,9 +20,7 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.userRegister)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.userActivate)
-	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.requireActivatedUser(app.userAuthenticate))
-	router.HandlerFunc(http.MethodPost, "/v1/users/login", app.requireActivatedUser(app.userLogin))
-	router.HandlerFunc(http.MethodPost, "/v1/users/logout", app.requireActivatedUser(app.userLogout))
+	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.userAuthenticate)
 
 	router.HandlerFunc(http.MethodPost, "/v1/awstest", app.s3Test)
 

@@ -41,14 +41,11 @@ func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Requ
 // @Router       /documents [post]
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Url_s3    string   `json:"url_s3"`
-		Filetype  string   `json:"filetype"`
-		Title     string   `json:"title"`
 		Tags      []string `json:"tags"`
 		Is_hidden bool     `json:"is_hidden"`
 	}
 
-	file, err := utils.ReadMultipartJSON(w, r, &input)
+	file, file_data, err := utils.ReadMultipartJSON(w, r, &input)
 	if err != nil {
 		utils.BadRequestResponse(w, r, err)
 		return
@@ -56,9 +53,8 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	defer file.Close()
 
 	document := &data.Document{
-		Url_s3:    input.Url_s3,
-		Filetype:  input.Filetype,
-		Title:     input.Title,
+		Filetype:  ".pdf",
+		Title:     file_data.Filename,
 		Tags:      input.Tags,
 		Is_hidden: input.Is_hidden,
 	}
@@ -105,7 +101,6 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	//! no error if document does not exist
 	err = app.data_access.Documents.Delete(id)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
