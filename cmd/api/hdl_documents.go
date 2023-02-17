@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"viadro_api/internal/data"
 	"viadro_api/utils"
@@ -19,26 +20,74 @@ import (
 // @Accept       json
 // @Produce      json
 // @Router       /documents [get]
-func (app *application) listDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	documents, err := app.data_access.Documents.GetAll()
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": documents}, nil)
+	responseSlice := []interface{}{}
+
+	for _, document := range documents {
+		doc := struct {
+			ID          int64     `json:"document_id"`
+			Title       string    `json:"title"`
+			Link        string    `json:"link"`
+			Tags        []string  `json:"tags"`
+			Uploaded_at time.Time `json:"created_at"`
+		}{
+			ID:          document.Document_id,
+			Title:       document.Title,
+			Link:        document.Url_s3,
+			Tags:        document.Tags,
+			Uploaded_at: document.Uploaded_at,
+		}
+
+		responseSlice = append(responseSlice, doc)
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": responseSlice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
-// addDocumentsHandler godoc
-// @Summary      add one document
-// @Description  add one document
-// @Tags         documents
-// @Accept       json
-// @Produce      json
-// @Router       /documents [post]
+func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.contextGetUser(r)
+
+	documents, err := app.data_access.Documents.GetUserAll(user.ID)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	responseSlice := []interface{}{}
+
+	for _, document := range documents {
+		doc := struct {
+			ID          int64     `json:"document_id"`
+			Title       string    `json:"title"`
+			Link        string    `json:"link"`
+			Tags        []string  `json:"tags"`
+			Uploaded_at time.Time `json:"created_at"`
+		}{
+			ID:          document.Document_id,
+			Title:       document.Title,
+			Link:        document.Url_s3,
+			Tags:        document.Tags,
+			Uploaded_at: document.Uploaded_at,
+		}
+
+		responseSlice = append(responseSlice, doc)
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": responseSlice}, nil)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Tags      []string `json:"tags"`
@@ -52,7 +101,10 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 	defer file.Close()
 
+	user := app.contextGetUser(r)
+
 	document := &data.Document{
+		User_id:   user.ID,
 		Filetype:  ".pdf",
 		Title:     file_data.Filename,
 		Tags:      input.Tags,
@@ -87,13 +139,6 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// deleteDocumentHandler godoc
-// @Summary      delete one document
-// @Description  delete one document
-// @Tags         documents
-// @Accept       json
-// @Produce      json
-// @Router       /documents/:id [delete]
 func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -113,13 +158,6 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// listDocumentsHandler godoc
-// @Summary      get details of one public documents
-// @Description  get details of one public documents
-// @Tags         documents
-// @Accept       json
-// @Produce      json
-// @Router       /documents/:id [get]
 func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -130,6 +168,13 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	user := app.contextGetUser(r)
+
+	if document.Is_hidden && document.User_id != user.ID {
+		utils.InvalidCredentialsResponse(w, r)
 		return
 	}
 

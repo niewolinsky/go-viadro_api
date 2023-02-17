@@ -41,15 +41,15 @@ func (d DocumentLayer) Delete(id int64) error {
 
 func (d DocumentLayer) Insert(document *Document) error {
 	query := `
-		INSERT INTO documents (filetype, title, tags, is_hidden, url_s3)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO documents (filetype, title, tags, is_hidden, url_s3, user_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING document_id, uploaded_at
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_hidden, document.Url_s3}
+	args := []interface{}{document.Filetype, document.Title, document.Tags, document.Is_hidden, document.Url_s3, document.User_id}
 
 	err := d.DB.QueryRow(ctx, query, args...).Scan(&document.Document_id, &document.Uploaded_at)
 	if err != nil {
@@ -92,12 +92,56 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 	query := `
 		SELECT document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
 		FROM documents
+		WHERE is_hidden = false
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	rows, err := d.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	documents := []Document{}
+
+	for rows.Next() {
+		document := Document{}
+		err := rows.Scan(
+			&document.Document_id,
+			&document.User_id,
+			&document.Url_s3,
+			&document.Filetype,
+			&document.Uploaded_at,
+			&document.Title,
+			&document.Tags,
+			&document.Is_hidden,
+		)
+		if err != nil {
+			return nil, err
+		}
+		documents = append(documents, document)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return documents, nil
+}
+
+func (d DocumentLayer) GetUserAll(user_id int64) ([]Document, error) {
+	query := `
+		SELECT document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
+		FROM documents
+		NATURAL JOIN users
+		WHERE users.id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := d.DB.Query(ctx, query, user_id)
 	if err != nil {
 		return nil, err
 	}
