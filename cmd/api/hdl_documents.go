@@ -22,7 +22,23 @@ import (
 // @Produce      json
 // @Router       /documents [get]
 func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
-	documents, err := app.data_access.Documents.GetAll()
+	qs := r.URL.Query()
+
+	input := struct {
+		Title string
+		Tags  []string
+		data.Filters
+	}{}
+
+	input.Title = utils.ReadStringParam(qs, "title", "")
+	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
+
+	input.Filters.Page = utils.ReadIntParam(qs, "page", 1)
+	input.Filters.PageSize = utils.ReadIntParam(qs, "page_size", 20)
+	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
+	input.Filters.SortSafelist = []string{"document_id", "-document_id"}
+
+	documents, metadata, err := app.data_access.Documents.GetAll(input.Title, input.Tags, input.Filters)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 		return
@@ -48,16 +64,34 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 		responseSlice = append(responseSlice, doc)
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": responseSlice}, nil)
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}
+
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+	qs := r.URL.Query()
+
+	input := struct {
+		Title string
+		Tags  []string
+		data.Filters
+	}{}
+
+	input.Title = utils.ReadStringParam(qs, "title", "")
+	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
+
+	input.Filters.Page = utils.ReadIntParam(qs, "page", 1)
+	input.Filters.PageSize = utils.ReadIntParam(qs, "page_size", 20)
+	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
+	input.Filters.SortSafelist = []string{"document_id", "-document_id"}
+
 	user := app.contextGetUser(r)
 
-	documents, err := app.data_access.Documents.GetUserAll(user.ID)
+	documents, metadata, err := app.data_access.Documents.GetUserAll(input.Title, input.Tags, input.Filters, user.ID)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 		return
@@ -85,7 +119,7 @@ func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.
 		responseSlice = append(responseSlice, doc)
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"documents": responseSlice}, nil)
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}

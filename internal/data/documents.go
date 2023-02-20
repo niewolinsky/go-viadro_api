@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -88,28 +89,34 @@ func (d DocumentLayer) Get(id int64) (*Document, error) {
 	return &document, nil
 }
 
-func (d DocumentLayer) GetAll() ([]Document, error) {
-	query := `
-		SELECT document_id, user_id, users.username, url_s3, filetype, uploaded_at, title, tags, is_hidden
+func (d DocumentLayer) GetAll(title string, tags []string, filters Filters) ([]Document, FilterMetadata, error) {
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
 		FROM documents
-		NATURAL JOIN users
-		WHERE is_hidden = false
-	`
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (tags @> $2 OR $2 = '{}')
+		AND is_hidden = false
+		ORDER BY %s %s, document_id ASC
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := d.DB.Query(ctx, query)
+	args := []interface{}{title, tags, filters.limit(), filters.offset()}
+
+	rows, err := d.DB.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, FilterMetadata{}, err
 	}
 	defer rows.Close()
 
+	totalRecords := 0
 	documents := []Document{}
 
 	for rows.Next() {
 		document := Document{}
 		err := rows.Scan(
+			&totalRecords,
 			&document.Document_id,
 			&document.User_id,
 			&document.Url_s3,
@@ -120,39 +127,46 @@ func (d DocumentLayer) GetAll() ([]Document, error) {
 			&document.Is_hidden,
 		)
 		if err != nil {
-			return nil, err
+			return nil, FilterMetadata{}, err
 		}
 		documents = append(documents, document)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, FilterMetadata{}, err
 	}
 
-	return documents, nil
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return documents, metadata, nil
 }
 
-func (d DocumentLayer) GetUserAll(user_id int64) ([]Document, error) {
-	query := `
-		SELECT document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
+func (d DocumentLayer) GetUserAll(title string, tags []string, filters Filters, user_id int64) ([]Document, FilterMetadata, error) {
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
 		FROM documents
-		NATURAL JOIN users
-		WHERE users.id = $1
-	`
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (tags @> $2 OR $2 = '{}')
+		AND user_id = $5
+		ORDER BY %s %s, document_id ASC
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := d.DB.Query(ctx, query, user_id)
+	args := []interface{}{title, tags, filters.limit(), filters.offset(), user_id}
+
+	rows, err := d.DB.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, FilterMetadata{}, err
 	}
 	defer rows.Close()
 
+	totalRecords := 0
 	documents := []Document{}
 
 	for rows.Next() {
 		document := Document{}
 		err := rows.Scan(
+			&totalRecords,
 			&document.Document_id,
 			&document.User_id,
 			&document.Url_s3,
@@ -163,15 +177,16 @@ func (d DocumentLayer) GetUserAll(user_id int64) ([]Document, error) {
 			&document.Is_hidden,
 		)
 		if err != nil {
-			return nil, err
+			return nil, FilterMetadata{}, err
 		}
 		documents = append(documents, document)
 	}
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, FilterMetadata{}, err
 	}
 
-	return documents, nil
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return documents, metadata, nil
 }
 
 func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
