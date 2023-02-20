@@ -10,6 +10,7 @@ import (
 	"viadro_api/utils"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -71,12 +72,14 @@ func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.
 			Link        string    `json:"link"`
 			Tags        []string  `json:"tags"`
 			Uploaded_at time.Time `json:"created_at"`
+			Is_hidden   bool      `json:"is_hidden"`
 		}{
 			ID:          document.Document_id,
 			Title:       document.Title,
 			Link:        document.Url_s3,
 			Tags:        document.Tags,
 			Uploaded_at: document.Uploaded_at,
+			Is_hidden:   document.Is_hidden,
 		}
 
 		responseSlice = append(responseSlice, doc)
@@ -111,7 +114,8 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		Is_hidden: input.Is_hidden,
 	}
 
-	res, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{
+	uploader := manager.NewUploader(app.s3_client)
+	res, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String("viadro-api"),
 		Key:    aws.String(document.Title),
 		Body:   file,
@@ -143,6 +147,29 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r)
+		return
+	}
+
+	document, err := app.data_access.Documents.Get(id)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	user := app.contextGetUser(r)
+
+	if document.User_id != user.ID {
+		utils.InvalidCredentialsResponse(w, r)
+		return
+	}
+
+	output, err := app.s3_client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String("viadro-api"),
+		Key:    aws.String(document.Title),
+	})
+	fmt.Println("OUTPUT: ", output)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
@@ -191,13 +218,42 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 		return
 	}
 
-	document, err := app.data_access.Documents.ToggleVisibility(id)
+	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": document}, nil)
+	user := app.contextGetUser(r)
+
+	if document.User_id != user.ID {
+		utils.InvalidCredentialsResponse(w, r)
+		return
+	}
+
+	document, err = app.data_access.Documents.ToggleVisibility(id)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	doc := struct {
+		ID          int64     `json:"document_id"`
+		Title       string    `json:"title"`
+		Link        string    `json:"link"`
+		Tags        []string  `json:"tags"`
+		Uploaded_at time.Time `json:"created_at"`
+		Is_hidden   bool      `json:"is_hidden"`
+	}{
+		ID:          document.Document_id,
+		Title:       document.Title,
+		Link:        document.Url_s3,
+		Tags:        document.Tags,
+		Uploaded_at: document.Uploaded_at,
+		Is_hidden:   document.Is_hidden,
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": doc}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}
@@ -218,7 +274,8 @@ func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	//!bugged, not opening in browser but downloading as attachment
-	response, err := app.s3_manager.Upload(context.TODO(), &s3.PutObjectInput{
+	uploader := manager.NewUploader(app.s3_client)
+	response, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String("viadro-api"),
 		Key:    aws.String("sample_pdf.pdf"),
 		Body:   file,

@@ -90,8 +90,9 @@ func (d DocumentLayer) Get(id int64) (*Document, error) {
 
 func (d DocumentLayer) GetAll() ([]Document, error) {
 	query := `
-		SELECT document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
+		SELECT document_id, user_id, users.username, url_s3, filetype, uploaded_at, title, tags, is_hidden
 		FROM documents
+		NATURAL JOIN users
 		WHERE is_hidden = false
 	`
 
@@ -178,6 +179,7 @@ func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 		UPDATE documents
 		SET is_hidden = NOT is_hidden
 		WHERE document_id = $1
+		RETURNING document_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -185,10 +187,8 @@ func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 
 	document := Document{}
 
-	//!error???? bug??
-	_ = d.DB.QueryRow(ctx, query, id).Scan(
+	err := d.DB.QueryRow(ctx, query, id).Scan(
 		&document.Document_id,
-		&document.User_id,
 		&document.Url_s3,
 		&document.Filetype,
 		&document.Uploaded_at,
@@ -196,6 +196,9 @@ func (d DocumentLayer) ToggleVisibility(id int64) (*Document, error) {
 		&document.Tags,
 		&document.Is_hidden,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &document, nil
 }

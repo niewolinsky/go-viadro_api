@@ -5,14 +5,14 @@ import (
 	"viadro_api/internal/data"
 	"viadro_api/internal/logger"
 
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/wneessen/go-mail"
 )
 
 type application struct {
 	config      config.Config
 	data_access data.Layers
-	s3_manager  *manager.Uploader
+	s3_client   *s3.Client
 	mail_client *mail.Client
 }
 
@@ -26,13 +26,13 @@ type application struct {
 // @BasePath  /v1/
 // @securityDefinitions.basic  BasicAuth
 func main() {
-	mail_client, aws_s3_manager, db_postgre, cfg := config.InitConfig()
+	mail_client, aws_s3_client, db_postgre, cfg := config.InitConfig()
 	defer db_postgre.Close()
 
 	app := &application{
 		config:      cfg,
 		data_access: data.NewLayers(db_postgre),
-		s3_manager:  aws_s3_manager,
+		s3_client:   aws_s3_client,
 		mail_client: mail_client,
 	}
 

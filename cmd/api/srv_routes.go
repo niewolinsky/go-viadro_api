@@ -26,7 +26,7 @@ func (app *application) routes() http.Handler {
 	//?user authentication routes
 	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.userRegister)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.userActivate)
-	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.userAuthenticate)
+	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.requireActivatedUser(app.userAuthenticate))
 
 	//?dev
 	router.HandlerFunc(http.MethodPost, "/v1/awstest", app.s3Test)

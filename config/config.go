@@ -7,7 +7,6 @@ import (
 	"viadro_api/internal/logger"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -39,15 +38,14 @@ func initializeMailClient(cfg Config) (*mail.Client, error) {
 	return mail_client, nil
 }
 
-func initializeAwsManager() (*manager.Uploader, error) {
+func initializeS3Client() (*s3.Client, error) {
 	aws_cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 	client := s3.NewFromConfig(aws_cfg)
-	uploader := manager.NewUploader(client)
 
-	return uploader, nil
+	return client, nil
 }
 
 func openPostgreDb(cfg Config) (*pgxpool.Pool, error) {
@@ -60,7 +58,7 @@ func openPostgreDb(cfg Config) (*pgxpool.Pool, error) {
 	return dbpool, nil
 }
 
-func InitConfig() (*mail.Client, *manager.Uploader, *pgxpool.Pool, Config) {
+func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, Config) {
 	cfg := Config{}
 
 	err := godotenv.Load()
@@ -88,7 +86,7 @@ func InitConfig() (*mail.Client, *manager.Uploader, *pgxpool.Pool, Config) {
 	}
 	logger.LogInfo("database connection established")
 
-	aws_s3_manager, err := initializeAwsManager()
+	aws_s3_client, err := initializeS3Client()
 	if err != nil {
 		logger.LogFatal("failed initializing aws s3 manager", err)
 	}
@@ -100,5 +98,5 @@ func InitConfig() (*mail.Client, *manager.Uploader, *pgxpool.Pool, Config) {
 	}
 	logger.LogInfo("mail client initialized")
 
-	return mail_client, aws_s3_manager, db_postgre, cfg
+	return mail_client, aws_s3_client, db_postgre, cfg
 }
