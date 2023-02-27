@@ -323,3 +323,55 @@ func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 }
+
+func (app *application) mergeDocumentHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Tags      []string `json:"tags"`
+		Is_hidden bool     `json:"is_hidden"`
+	}
+
+	file, file_data, err := utils.ReadMultipartJSON(w, r, &input)
+	if err != nil {
+		utils.BadRequestResponse(w, r, err)
+		return
+	}
+	defer file.Close()
+
+	user := app.contextGetUser(r)
+
+	document := &data.Document{
+		User_id:   user.ID,
+		Filetype:  ".pdf",
+		Title:     file_data.Filename,
+		Tags:      input.Tags,
+		Is_hidden: input.Is_hidden,
+	}
+
+	uploader := manager.NewUploader(app.s3_client)
+	res, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String("viadro-api"),
+		Key:    aws.String(document.Title),
+		Body:   file,
+		ACL:    "public-read",
+	})
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	document.Url_s3 = res.Location
+
+	err = app.data_access.Documents.Insert(document)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", document.Document_id))
+
+	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"document": document}, headers)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err)
+	}
+}
