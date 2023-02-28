@@ -36,7 +36,7 @@ func NotFoundResponse(w http.ResponseWriter, r *http.Request) {
 }
 
 func InvalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
-	message := "invalid authentication credentials"
+	message := "invalid authentication credentials, user not found or wrong password"
 	errorResponse(w, r, http.StatusUnauthorized, message)
 }
 

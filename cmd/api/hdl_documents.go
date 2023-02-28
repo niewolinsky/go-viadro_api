@@ -2,16 +2,22 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"viadro_api/internal/data"
+	"viadro_api/internal/logger"
 	"viadro_api/utils"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+)
+
+var (
+	ErrRecordNotFound = errors.New("record not found")
 )
 
 // listDocumentsHandler godoc
@@ -40,7 +46,7 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 
 	documents, metadata, err := app.data_access.Documents.GetAll(input.Title, input.Tags, input.Filters)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
@@ -66,7 +72,7 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 
 	fmt.Fprintf(w, "%+v\n", input)
@@ -228,14 +234,21 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			logger.LogError("Document does not exist", err) //? http.StatusNotFound - 404
+			utils.NotFoundResponse(w, r)
+		default:
+			logger.LogError("failed getting document", err) //? http.StatusInternalServerError - 500
+			utils.ServerErrorResponse(w, r, err)
+		}
 		return
 	}
 
 	user := app.contextGetUser(r)
 
 	if document.Is_hidden && document.User_id != user.ID {
-		utils.InvalidCredentialsResponse(w, r)
+		utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		return
 	}
 
@@ -254,7 +267,14 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 
 	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			logger.LogError("Document does not exist", err) //? http.StatusNotFound - 404
+			utils.NotFoundResponse(w, r)
+		default:
+			logger.LogError("failed getting document", err) //? http.StatusInternalServerError - 500
+			utils.ServerErrorResponse(w, r, err)
+		}
 		return
 	}
 
@@ -319,7 +339,7 @@ func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
-	fmt.Println(response.Location)
+	fmt.Println("RESPONSE: ", response.Location)
 
 	w.WriteHeader(200)
 }

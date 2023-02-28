@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"errors"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 var (
 	ErrDuplicateEmail = errors.New("duplicate email")
 	ErrRecordNotFound = errors.New("record not found")
+	ErrBadPassword    = errors.New("bad password")
 )
 
 type UserLayer struct {
@@ -58,7 +58,7 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 	if err != nil {
 		switch {
 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
-			return false, nil
+			return false, ErrBadPassword
 		default:
 			return false, err
 		}
@@ -81,7 +81,7 @@ func (u UserLayer) Insert(user *User) error {
 	err := u.DB.QueryRow(ctx, query, args...).Scan(&user.ID, &user.CreatedAt)
 	if err != nil {
 		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
+		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:
 			return ErrDuplicateEmail
 		default:
 			return err
@@ -179,7 +179,7 @@ func (u UserLayer) GetByEmail(email string) (*User, error) {
 	)
 	if err != nil {
 		switch {
-		case errors.Is(err, sql.ErrNoRows):
+		case errors.Is(err, pgx.ErrNoRows):
 			return nil, ErrRecordNotFound
 		default:
 			return nil, err

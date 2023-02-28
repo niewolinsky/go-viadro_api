@@ -70,7 +70,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
 		if user.IsAnonymous() {
-			utils.AuthenticationRequiredResponse(w, r)
+			utils.AuthenticationRequiredResponse(w, r) //? http.StatusUnauthorized - 401
 			return
 		}
 

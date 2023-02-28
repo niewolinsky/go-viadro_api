@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"flag"
-	"fmt"
 	"viadro_api/internal/logger"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -49,7 +48,6 @@ func initializeS3Client() (*s3.Client, error) {
 }
 
 func openPostgreDb(cfg Config) (*pgxpool.Pool, error) {
-	fmt.Println(cfg.Db.Dsn)
 	dbpool, err := pgxpool.New(context.Background(), cfg.Db.Dsn)
 	if err != nil {
 		return nil, err
