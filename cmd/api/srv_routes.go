@@ -15,7 +15,7 @@ func (app *application) routes() http.Handler {
 
 	//?multiple documents routes
 	router.HandlerFunc(http.MethodGet, "/v1/documents", app.listAllDocumentsHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/documents/my", app.listUserDocumentsHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/documents/my", app.requireActivatedUser(app.listUserDocumentsHandler))
 
 	//?single document routes
 	router.HandlerFunc(http.MethodGet, "/v1/document/:id", app.getDocumentHandler)
@@ -29,7 +29,7 @@ func (app *application) routes() http.Handler {
 	//?user authentication routes
 	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.userRegister)
 	router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.userActivate)
-	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.requireActivatedUser(app.userAuthenticate))
+	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.userAuthenticate)
 
 	//?dev
 	router.HandlerFunc(http.MethodPost, "/v1/awstest", app.s3Test)
