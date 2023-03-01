@@ -23,16 +23,10 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodDelete, "/v1/document/:id", app.requireActivatedUser(app.deleteDocumentHandler))
 	router.HandlerFunc(http.MethodPatch, "/v1/document/:id", app.requireActivatedUser(app.toggleDocumentVisibilityHandler))
 
-	//?utility document routes
-	router.HandlerFunc(http.MethodPost, "/v1/document/util/merge", app.mergeDocumentHandler)
-
 	//?user authentication routes
-	router.HandlerFunc(http.MethodPost, "/v1/users/register", app.userRegister)
-	router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.userActivate)
-	router.HandlerFunc(http.MethodPut, "/v1/users/authenticate", app.userAuthenticate)
-
-	//?dev
-	router.HandlerFunc(http.MethodPost, "/v1/awstest", app.s3Test)
+	router.HandlerFunc(http.MethodPost, "/v1/user/register", app.userRegister)
+	router.HandlerFunc(http.MethodPut, "/v1/user/activate", app.userActivate)
+	router.HandlerFunc(http.MethodPut, "/v1/user/authenticate", app.userAuthenticate)
 
 	return app.authenticate(router)
 }

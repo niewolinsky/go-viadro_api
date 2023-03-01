@@ -10,6 +10,18 @@ import (
 	"viadro_api/utils"
 )
 
+// Register a new user
+//
+//	@Summary      Register a new user
+//	@Description  Register a new user
+//	@Tags         user
+//	@Accept      json
+//	@Produce      json
+//	@Success      202  {object}   data.User
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      422  {string}  "User exists"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /user/register [post]
 func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Username string `json:"username"`
@@ -88,6 +100,18 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Activate user account
+//
+//	@Summary      Activate user account
+//	@Description  Activate user account
+//	@Tags         user
+//	@Accept      json
+//	@Produce      json
+//	@Success      200  {string}  "User activated"
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      422  {string}  "Invalid or expired token"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /user/activate [put]
 func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		TokenPlaintext string `json:"token"`
@@ -136,6 +160,18 @@ func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Authenticate (login) user
+//
+//	@Summary      Authenticate (login) user
+//	@Description  Authenticate (login) user
+//	@Tags         user
+//	@Accept      json
+//	@Produce      json
+//	@Success      201  {string}  "User authenticated"
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      401  {string}  "Bad credentials"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /user/authenticate [put]
 func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Email    string `json:"email"`

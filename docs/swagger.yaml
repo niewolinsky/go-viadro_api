@@ -1,46 +1,312 @@
 basePath: /v1/
-host: localhost:4000
+consumes:
+- application/json
+- multipart/form-data
+definitions:
+  data.Document:
+    properties:
+      document_id:
+        type: integer
+      filetype:
+        type: string
+      is_hidden:
+        type: boolean
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      uploaded_at:
+        type: string
+      url_s3:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  data.User:
+    properties:
+      activated:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+host: viadro.xyz:4000
 info:
   contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: Open-source document hosting solution
+    email: niewolinski@protonmail.com
+    name: Viadro API Developer - Przemyslaw Niewolinski
+    url: https://www.niewolinsky.dev
+  description: Open-source document hosting solution based on S3 storage.
+  license:
+    name: MIT License
+    url: https://github.com/niewolinsky/go-viadro_api/blob/main/license.txt
   title: Viadro API
-  version: 0.1.0
+  version: 1.0.0
 paths:
-  /documents:
-    get:
+  /document:
+    post:
       consumes:
-      - application/json
-      description: get all public documents
+      - multipart/form-data
+      description: Add single document
       produces:
       - application/json
-      responses: {}
-      summary: get all public documents
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/data.Document'
+        "400":
+          description: Bad json reqest
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Add single document
+      tags:
+      - document
+  /document/:id:
+    delete:
+      description: Delete document
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete document
+      tags:
+      - document
+    get:
+      description: Delete document
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete document
+      tags:
+      - document
+    patch:
+      description: Toggle document visibility
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully toggled visibility
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Toggle document visibility
+      tags:
+      - document
+  /documentation/index.html:
+    get:
+      description: API documentation
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: Page loaded
+          schema:
+            type: string
+        "404":
+          description: Page not found
+          schema:
+            type: string
+      summary: API documentation
+      tags:
+      - utility
+  /documents:
+    get:
+      description: List all visible (public) documents
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/data.Document'
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: List all visible (public) documents
       tags:
       - documents
+  /documents/my:
+    get:
+      description: List all user's documents
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/data.Document'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: List all user's documents
+      tags:
+      - documents
+  /healthcheck:
+    get:
+      description: Check service status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service available
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Check service status
+      tags:
+      - utility
+  /user/activate:
+    put:
+      consumes:
+      - application/json
+      description: Activate user account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User activated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: Invalid or expired token
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Activate user account
+      tags:
+      - user
+  /user/authenticate:
+    put:
+      consumes:
+      - application/json
+      description: Authenticate (login) user
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User authenticated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "401":
+          description: Bad credentials
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Authenticate (login) user
+      tags:
+      - user
+  /user/register:
     post:
       consumes:
       - application/json
-      description: add one document
+      description: Register a new user
       produces:
       - application/json
-      responses: {}
-      summary: add one document
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/data.User'
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: User exists
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Register a new user
       tags:
-      - documents
-  /documents/:id:
-    delete:
-      consumes:
-      - application/json
-      description: delete one document
-      produces:
-      - application/json
-      responses: {}
-      summary: delete one document
-      tags:
-      - documents
+      - user
+produces:
+- application/json
+schemes:
+- https
 securityDefinitions:
   BasicAuth:
     type: basic

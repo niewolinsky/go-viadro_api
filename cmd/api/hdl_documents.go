@@ -20,13 +20,15 @@ var (
 	ErrRecordNotFound = errors.New("record not found")
 )
 
-// listDocumentsHandler godoc
-// @Summary      get all public documents
-// @Description  get all public documents
-// @Tags         documents
-// @Accept       json
-// @Produce      json
-// @Router       /documents [get]
+// List all visible (public) documents
+//
+//	@Summary      List all visible (public) documents
+//	@Description  List all visible (public) documents
+//	@Tags         documents
+//	@Produce      json
+//	@Success      200  {object}   data.Document
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /documents [get]
 func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
 
@@ -78,6 +80,16 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 	fmt.Fprintf(w, "%+v\n", input)
 }
 
+// List all user's documents
+//
+//	@Summary      List all user's documents
+//	@Description  List all user's documents
+//	@Tags         documents
+//	@Produce      json
+//	@Success      200  {object}   data.Document
+//	@Failure      401  {string}  "Unauthorized"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /documents/my [get]
 func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
 
@@ -131,6 +143,18 @@ func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.
 	}
 }
 
+// Add single document
+//
+//	@Summary      Add single document
+//	@Description  Add single document
+//	@Tags         document
+//	@Accept       mpfd
+//	@Produce      json
+//	@Success      200  {object}   data.Document
+//	@Failure      400  {string}  "Bad json reqest"
+//	@Failure      401  {string}  "Unauthorized"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /document [post]
 func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Tags      []string `json:"tags"`
@@ -183,6 +207,17 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// Delete document
+//
+//	@Summary      Delete document
+//	@Description  Delete document
+//	@Tags         document
+//	@Produce      json
+//	@Success      200  {string}  "Successfully deleted"
+//	@Failure      401  {string}  "Unauthorized"
+//	@Failure      404  {string}  "Not found"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /document/:id [delete]
 func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -225,6 +260,17 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// Get document details
+//
+//	@Summary      Delete document
+//	@Description  Delete document
+//	@Tags         document
+//	@Produce      json
+//	@Success      200  {string}  data.Document
+//	@Failure      401  {string}  "Unauthorized"
+//	@Failure      404  {string}  "Not found"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /document/:id [get]
 func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -258,6 +304,17 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// Toggle document visibility
+//
+//	@Summary      Toggle document visibility
+//	@Description  Toggle document visibility
+//	@Tags         document
+//	@Produce      json
+//	@Success      200  {string}  "Successfully toggled visibility"
+//	@Failure      401  {string}  "Unauthorized"
+//	@Failure      404  {string}  "Not found"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /document/:id [patch]
 func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -308,89 +365,6 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": doc}, nil)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-	}
-}
-
-func (app *application) s3Test(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(32 << 20) // maxMemory 32MB
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-
-	file, _, err := r.FormFile("document")
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-	defer file.Close()
-
-	//!bugged, not opening in browser but downloading as attachment
-	uploader := manager.NewUploader(app.s3_client)
-	response, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String("viadro-api"),
-		Key:    aws.String("sample_pdf.pdf"),
-		Body:   file,
-		ACL:    "public-read",
-	})
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-	fmt.Println("RESPONSE: ", response.Location)
-
-	w.WriteHeader(200)
-}
-
-func (app *application) mergeDocumentHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Tags      []string `json:"tags"`
-		Is_hidden bool     `json:"is_hidden"`
-	}
-
-	file, file_data, err := utils.ReadMultipartJSON(w, r, &input)
-	if err != nil {
-		utils.BadRequestResponse(w, r, err)
-		return
-	}
-	defer file.Close()
-
-	user := app.contextGetUser(r)
-
-	document := &data.Document{
-		User_id:   user.ID,
-		Filetype:  ".pdf",
-		Title:     file_data.Filename,
-		Tags:      input.Tags,
-		Is_hidden: input.Is_hidden,
-	}
-
-	uploader := manager.NewUploader(app.s3_client)
-	res, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String("viadro-api"),
-		Key:    aws.String(document.Title),
-		Body:   file,
-		ACL:    "public-read",
-	})
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-
-	document.Url_s3 = res.Location
-
-	err = app.data_access.Documents.Insert(document)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-
-	headers := make(http.Header)
-	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", document.Document_id))
-
-	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"document": document}, headers)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}

@@ -16,15 +16,21 @@ type application struct {
 	mail_client *mail.Client
 }
 
-// @title           Viadro API
-// @version         0.1.0
-// @description     Open-source document hosting solution
-// @contact.name   API Support
-// @contact.url    http://www.swagger.io/support
-// @contact.email  support@swagger.io
-// @host      localhost:4000
-// @BasePath  /v1/
-// @securityDefinitions.basic  BasicAuth
+//	@title						Viadro API
+//	@version					1.0.0
+//	@description				Open-source document hosting solution based on S3 storage.
+//	@contact.name				Viadro API Developer - Przemyslaw Niewolinski
+//	@contact.url				https://www.niewolinsky.dev
+//	@contact.email				niewolinski@protonmail.com
+//	@host						viadro.xyz:4000
+//	@BasePath					/v1/
+//	@securityDefinitions.basic	BasicAuth
+//	@schemes					https
+//	@produce					json
+//	@accept						json
+//	@accept						mpfd
+//	@license.name				MIT License
+//	@license.url				https://github.com/niewolinsky/go-viadro_api/blob/main/license.txt
 func main() {
 	mail_client, aws_s3_client, db_postgre, cfg := config.InitConfig()
 	defer db_postgre.Close()
