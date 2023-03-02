@@ -92,6 +92,20 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 	return app.requireAuthenticatedUser(fn)
 }
 
+func (app *application) requireAdminUser(next http.HandlerFunc) http.HandlerFunc {
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+		if !user.IsAdmin {
+			utils.NotAdminResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+
+	return app.requireActivatedUser(fn)
+}
+
 // func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
 // 	fn := func(w http.ResponseWriter, r *http.Request) {
 // 		user := app.contextGetUser(r)

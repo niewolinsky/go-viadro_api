@@ -35,6 +35,7 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
+	IsAdmin   bool      `json:"is_admin"`
 }
 
 func (u *User) IsAnonymous() bool {
@@ -69,11 +70,11 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 
 func (u UserLayer) Insert(user *User) error {
 	query := `
-		INSERT INTO users (username, email, password_hash, activated)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO users (username, email, password_hash, activated, is_admin)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at
 	`
-	args := []interface{}{user.Username, user.Email, user.Password.hash, user.Activated}
+	args := []interface{}{user.Username, user.Email, user.Password.hash, user.Activated, user.IsAdmin}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -94,8 +95,8 @@ func (u UserLayer) Insert(user *User) error {
 func (u UserLayer) Update(user *User) error {
 	query := `
 		UPDATE users
-		SET username = $1, email = $2, password_hash = $3, activated = $4
-		WHERE id = $5
+		SET username = $1, email = $2, password_hash = $3, activated = $4, is_admin = $5
+		WHERE id = $6
 	`
 
 	args := []interface{}{
@@ -103,6 +104,7 @@ func (u UserLayer) Update(user *User) error {
 		user.Email,
 		user.Password.hash,
 		user.Activated,
+		user.IsAdmin,
 		user.ID,
 	}
 
@@ -121,7 +123,7 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
 
 	query := `
-		SELECT users.id, users.created_at, users.username, users.email, users.password_hash, users.activated
+		SELECT users.id, users.created_at, users.username, users.email, users.password_hash, users.activated, users.is_admin
 		FROM users
 		INNER JOIN tokens
 		ON users.id = tokens.user_id
@@ -144,6 +146,7 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
+		&user.IsAdmin,
 	)
 	if err != nil {
 		switch {
@@ -159,7 +162,7 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 
 func (u UserLayer) GetByEmail(email string) (*User, error) {
 	query := `
-		SELECT id, created_at, username, email, password_hash, activated
+		SELECT id, created_at, username, email, password_hash, activated, is_admin
 		FROM users
 		WHERE email = $1
 	`
@@ -176,6 +179,40 @@ func (u UserLayer) GetByEmail(email string) (*User, error) {
 		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
+		&user.IsAdmin,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
+
+func (u UserLayer) GetById(id int64) (*User, error) {
+	query := `
+		SELECT id, created_at, username, email, password_hash, activated, is_admin
+		FROM users
+		WHERE id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	user := User{}
+
+	err := u.DB.QueryRow(ctx, query, id).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Username,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+		&user.IsAdmin,
 	)
 	if err != nil {
 		switch {

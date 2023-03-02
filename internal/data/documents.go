@@ -102,6 +102,55 @@ func (d DocumentLayer) GetAll(title string, tags []string, filters Filters) ([]D
 		FROM documents
 		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 		AND (tags @> $2 OR $2 = '{}')
+		ORDER BY %s %s, document_id ASC
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	args := []interface{}{title, tags, filters.limit(), filters.offset()}
+
+	rows, err := d.DB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, FilterMetadata{}, err
+	}
+	defer rows.Close()
+
+	totalRecords := 0
+	documents := []Document{}
+
+	for rows.Next() {
+		document := Document{}
+		err := rows.Scan(
+			&totalRecords,
+			&document.Document_id,
+			&document.User_id,
+			&document.Url_s3,
+			&document.Filetype,
+			&document.Uploaded_at,
+			&document.Title,
+			&document.Tags,
+			&document.Is_hidden,
+		)
+		if err != nil {
+			return nil, FilterMetadata{}, err
+		}
+		documents = append(documents, document)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, FilterMetadata{}, err
+	}
+
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return documents, metadata, nil
+}
+
+func (d DocumentLayer) GetAllVisible(title string, tags []string, filters Filters) ([]Document, FilterMetadata, error) {
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), document_id, user_id, url_s3, filetype, uploaded_at, title, tags, is_hidden
+		FROM documents
+		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (tags @> $2 OR $2 = '{}')
 		AND is_hidden = false
 		ORDER BY %s %s, document_id ASC
 		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())

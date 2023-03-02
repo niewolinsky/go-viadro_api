@@ -69,8 +69,14 @@ func AuthenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
 	message := "you must be authenticated to access this resource"
 	errorResponse(w, r, http.StatusUnauthorized, message)
 }
+
 func InactiveAccountResponse(w http.ResponseWriter, r *http.Request) {
 	message := "your user account must be activated to access this resource"
+	errorResponse(w, r, http.StatusForbidden, message)
+}
+
+func NotAdminResponse(w http.ResponseWriter, r *http.Request) {
+	message := "you dont have required role or privilege to complete this action"
 	errorResponse(w, r, http.StatusForbidden, message)
 }
 

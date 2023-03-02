@@ -40,6 +40,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		Username:  input.Username,
 		Email:     input.Email,
 		Activated: false,
+		IsAdmin:   false,
 	}
 
 	err = user.Password.Set(input.Password)
