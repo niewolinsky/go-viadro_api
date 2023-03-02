@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"viadro_api/internal/data"
@@ -201,7 +202,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	uploader := manager.NewUploader(app.s3_client)
 	res, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String("viadro-api"),
+		Bucket: aws.String(os.Getenv("AWS_S3_BUCKET_NAME")),
 		Key:    aws.String(document.Title),
 		Body:   file,
 		ACL:    "public-read",

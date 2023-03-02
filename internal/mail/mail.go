@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"html/template"
+	"os"
 
 	"github.com/wneessen/go-mail"
 )
@@ -30,12 +31,9 @@ func PrepareEmail(recipient, templateFile string, data interface{}) (*mail.Msg, 
 	}
 
 	m := mail.NewMsg()
-	m.From("design.niewolinsky@gmail.com")
-	m.To("design.niewolinsky@gmail.com")
+	m.From(os.Getenv("SMTP_SENDER"))
+	m.To(recipient)
 	m.Subject(subject.String())
-	// m.SetGenHeader("To", recipient)
-	// m.SetGenHeader("From", "design.niewolinsky@gmail.com")
-	// m.SetGenHeader("Subject", subject.String())
 	m.SetBodyString(mail.TypeTextHTML, htmlBody.String())
 
 	return m, nil
