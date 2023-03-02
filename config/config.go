@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 	"github.com/wneessen/go-mail"
 )
 
@@ -21,6 +22,11 @@ type Config struct {
 	Env     string
 	Db      struct {
 		Dsn string
+	}
+	Cache struct {
+		Dsn      string
+		Password string
+		Index    int
 	}
 	Smtp struct {
 		Host     string
@@ -59,7 +65,21 @@ func openPostgreDb(cfg Config) (*pgxpool.Pool, error) {
 	return dbpool, nil
 }
 
-func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, Config) {
+func openRedis(cfg Config) (*redis.Client, error) {
+	cache_client := redis.NewClient(&redis.Options{
+		Addr:     cfg.Cache.Dsn,
+		Password: cfg.Cache.Password, // no password set
+		DB:       cfg.Cache.Index,    // use default DB
+	})
+	_, err := cache_client.Ping(context.TODO()).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return cache_client, nil
+}
+
+func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, *redis.Client, Config) {
 	cfg := Config{}
 
 	err := godotenv.Load()
@@ -68,14 +88,27 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, Config) {
 	}
 	logger.LogInfo("environment variables loaded")
 
+	//?APP
 	APP_PORT, err := strconv.Atoi(os.Getenv("APP_PORT"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	flag.IntVar(&cfg.Port, "port", APP_PORT, "API server port")
 	flag.StringVar(&cfg.Env, "env", "development", "Environment (development|production)")
+
+	//?POSTGRES
 	flag.StringVar(&cfg.Db.Dsn, "db-dsn", os.Getenv("DB_DSN"), "PostgreSQL DSN")
 
+	//?REDIS
+	flag.StringVar(&cfg.Cache.Dsn, "cache_dsn", os.Getenv("CACHE_DSN"), "Redis URI")
+	flag.StringVar(&cfg.Cache.Password, "cache_password", os.Getenv("CACHE_PASSWORD"), "Redis Password")
+	CACHE_INDEX, err := strconv.Atoi(os.Getenv("CACHE_INDEX"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	flag.IntVar(&cfg.Cache.Index, "cache_index", CACHE_INDEX, "Redis Cache Number")
+
+	//?SMTP
 	flag.StringVar(&cfg.Smtp.Host, "smtp-host", os.Getenv("SMTP_HOST"), "SMTP host")
 	SMTP_PORT, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
 	if err != nil {
@@ -95,6 +128,12 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, Config) {
 	}
 	logger.LogInfo("database connection established")
 
+	cache_client, err := openRedis(cfg)
+	if err != nil {
+		logger.LogFatal("failed opening cache", err)
+	}
+	logger.LogInfo("cache connection established")
+
 	aws_s3_client, err := initializeS3Client()
 	if err != nil {
 		logger.LogFatal("failed initializing aws s3 manager", err)
@@ -107,5 +146,5 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, Config) {
 	}
 	logger.LogInfo("mail client initialized")
 
-	return mail_client, aws_s3_client, db_postgre, cfg
+	return mail_client, aws_s3_client, db_postgre, cache_client, cfg
 }

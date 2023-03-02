@@ -31,6 +31,25 @@ var (
 //	@Router       /documents [get]
 func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
+	if len(qs) == 0 {
+		cachedResponse, err := app.cache_client.Get(context.TODO(), "defaultValues").Result()
+		if err != nil {
+			switch {
+			case (err.Error() == "redis: nil"):
+				fmt.Println("empty cache")
+			default:
+				logger.LogError("cache error", err)
+			}
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(cachedResponse))
+			if err != nil {
+				utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+			}
+			return
+		}
+	}
 
 	input := struct {
 		Title string
@@ -40,7 +59,6 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 
 	input.Title = utils.ReadStringParam(qs, "title", "")
 	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
-
 	input.Filters.Page = utils.ReadIntParam(qs, "page", 1)
 	input.Filters.PageSize = utils.ReadIntParam(qs, "page_size", 20)
 	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
@@ -72,9 +90,14 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 		responseSlice = append(responseSlice, doc)
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
+	jsonData, err := utils.WriteJSONCache(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+	}
+
+	err = app.cache_client.Set(context.TODO(), "defaultValues", jsonData, time.Hour*24).Err()
+	if err != nil {
+		logger.LogError("failed caching response", err)
 	}
 }
 
@@ -203,6 +226,11 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
 	}
+
+	err = app.cache_client.FlushAll(context.TODO()).Err()
+	if err != nil {
+		logger.LogError("Failed flushing cache", err)
+	}
 }
 
 // Delete document
@@ -255,6 +283,11 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"message": "document successfully deleted"}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
+	}
+
+	err = app.cache_client.FlushAll(context.TODO()).Err()
+	if err != nil {
+		logger.LogError("Failed flushing cache", err)
 	}
 }
 
@@ -365,5 +398,10 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": doc}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err)
+	}
+
+	err = app.cache_client.FlushAll(context.TODO()).Err()
+	if err != nil {
+		logger.LogError("Failed flushing cache", err)
 	}
 }
