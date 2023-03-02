@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"viadro_api/config"
 	"viadro_api/internal/data"
 	"viadro_api/internal/logger"
@@ -16,6 +17,7 @@ type application struct {
 	s3_client    *s3.Client
 	cache_client *redis.Client
 	mail_client  *mail.Client
+	wg           sync.WaitGroup
 }
 
 // @title						Viadro API
