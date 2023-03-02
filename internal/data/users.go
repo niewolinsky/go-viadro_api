@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -224,4 +225,68 @@ func (u UserLayer) GetById(id int64) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (u UserLayer) GetAll() ([]User, error) {
+	query := `
+		SELECT id, username, email, created_at, activated, is_admin
+		FROM users
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := u.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := []User{}
+
+	for rows.Next() {
+		user := User{}
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.CreatedAt,
+			&user.Activated,
+			&user.IsAdmin,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (u UserLayer) Delete(id int64) error {
+	query := `
+		DELETE FROM users
+		WHERE id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := u.DB.Exec(ctx, query, id)
+	fmt.Println(err)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			fmt.Println(err)
+			return ErrRecordNotFound
+		default:
+			fmt.Println(err)
+			return err
+		}
+	}
+
+	return nil
 }

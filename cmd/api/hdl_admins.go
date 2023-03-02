@@ -55,3 +55,16 @@ func (app *application) toggleAdminGrant(w http.ResponseWriter, r *http.Request)
 		utils.ServerErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) getAllUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := app.data_access.Users.GetAll()
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+		return
+	}
+
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"users": users}, nil)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+	}
+}

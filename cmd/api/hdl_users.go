@@ -225,3 +225,50 @@ func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request)
 		utils.ServerErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) userDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := utils.ReadIDParam(r)
+	if err != nil {
+		utils.NotFoundResponse(w, r)
+		return
+	}
+
+	user, err := app.data_access.Users.GetById(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			logger.LogError("user not found", err) //? http.StatusUnauthorized - 404
+			utils.NotFoundResponse(w, r)
+		default:
+			logger.LogError("failed to delete user", err) //? http.StatusInternalServerError - 500
+			utils.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	userCtx := app.contextGetUser(r)
+
+	if user.ID != userCtx.ID && !userCtx.IsAdmin {
+		utils.InvalidCredentialsResponse(w, r)
+		return
+	}
+
+	err = app.data_access.Users.Delete(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			logger.LogError("user not found", err) //? http.StatusUnauthorized - 404
+			utils.NotFoundResponse(w, r)
+		default:
+			logger.LogError("failed to delete user", err) //? http.StatusInternalServerError - 500
+			utils.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = utils.WriteJSON(w, http.StatusNoContent, nil, nil)
+	if err != nil {
+		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
+		utils.ServerErrorResponse(w, r, err)
+	}
+}
