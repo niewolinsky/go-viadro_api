@@ -76,8 +76,6 @@ func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
-
-	fmt.Fprintf(w, "%+v\n", input)
 }
 
 // List all user's documents
