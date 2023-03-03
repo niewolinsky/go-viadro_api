@@ -32,25 +32,25 @@ var (
 //	@Router       /documents [get]
 func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
-	// if len(qs) == 0 {
-	// 	cachedResponse, err := app.redis_client.Get(context.TODO(), "defaultValues").Result()
-	// 	if err != nil {
-	// 		switch {
-	// 		case (err.Error() == "redis: nil"):
-	// 			fmt.Println("empty cache")
-	// 		default:
-	// 			logger.LogError("cache error", err)
-	// 		}
-	// 	} else {
-	// 		w.Header().Set("Content-Type", "application/json")
-	// 		w.WriteHeader(http.StatusOK)
-	// 		_, err := w.Write([]byte(cachedResponse))
-	// 		if err != nil {
-	// 			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
-	// 		}
-	// 		return
-	// 	}
-	// }
+	if len(qs) == 0 {
+		cachedResponse, err := app.redis_client.Get(context.TODO(), "defaultValues").Result()
+		if err != nil {
+			switch {
+			case (err.Error() == "redis: nil"):
+				fmt.Println("empty cache")
+			default:
+				logger.LogError("cache error", err)
+			}
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(cachedResponse))
+			if err != nil {
+				utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+			}
+			return
+		}
+	}
 
 	input := struct {
 		Title string
@@ -82,7 +82,7 @@ func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	responseSlice := []interface{}{}
+	responses_slice := []interface{}{}
 
 	for _, document := range documents {
 		doc := struct {
@@ -101,10 +101,10 @@ func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Re
 			Uploaded_at: document.Uploaded_at,
 		}
 
-		responseSlice = append(responseSlice, doc)
+		responses_slice = append(responses_slice, doc)
 	}
 
-	jsonData, err := utils.WriteJSONCache(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
+	jsonData, err := utils.WriteJSONCache(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responses_slice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
@@ -158,7 +158,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		ACL:    "public-read",
 	})
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
@@ -166,16 +166,16 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	err = app.data_access.Documents.Insert(document)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
-	headers := make(http.Header)
+	headers := http.Header{}
 	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", document.Document_id))
 
 	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"document": document}, headers)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()
@@ -198,13 +198,13 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		utils.NotFoundResponse(w, r)
+		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		return
 	}
 
 	document, err := app.data_access.Documents.Get(id)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
@@ -221,19 +221,19 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 	})
 	fmt.Println("OUTPUT: ", output)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
 	err = app.data_access.Documents.Delete(id)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"message": "document successfully deleted"}, nil)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()
@@ -256,7 +256,7 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		utils.NotFoundResponse(w, r)
+		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		return
 	}
 
@@ -264,11 +264,9 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("Document does not exist", err) //? http.StatusNotFound - 404
-			utils.NotFoundResponse(w, r)
+			utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		default:
-			logger.LogError("failed getting document", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
@@ -300,7 +298,7 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		utils.NotFoundResponse(w, r)
+		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		return
 	}
 
@@ -308,11 +306,9 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("Document does not exist", err) //? http.StatusNotFound - 404
-			utils.NotFoundResponse(w, r)
+			utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		default:
-			logger.LogError("failed getting document", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
@@ -320,17 +316,17 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	user := app.contextGetUser(r)
 
 	if document.User_id != user.User_id && !user.Is_admin {
-		utils.InvalidCredentialsResponse(w, r)
+		utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		return
 	}
 
 	document, err = app.data_access.Documents.ToggleVisibility(id)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
-	doc := struct {
+	response := struct {
 		ID          int       `json:"document_id"`
 		Title       string    `json:"title"`
 		Link        string    `json:"link"`
@@ -346,9 +342,9 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 		Is_hidden:   document.Is_hidden,
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": doc}, nil)
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"document": response}, nil)
 	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()

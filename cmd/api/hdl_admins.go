@@ -24,7 +24,7 @@ import (
 func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		utils.NotFoundResponse(w, r)
+		utils.NotFoundResponse(w, r) //? http.NotFoundResponse - 404
 		return
 	}
 
@@ -32,11 +32,9 @@ func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("user not found", err) //? http.StatusUnprocessableEntity - 422
-			utils.FailedValidationResponse(w, r, map[string]string{"user not found": "true"})
+			utils.FailedValidationResponse(w, r, map[string]string{"user not found": "true"}) //? http.StatusUnprocessableEntity - 422
 		default:
-			logger.LogError("internal error during retriving user by id", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
@@ -92,7 +90,7 @@ func (app *application) getAllDocumentsAdminHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	responseSlice := []interface{}{}
+	responses_slice := []interface{}{}
 
 	for _, document := range documents {
 		doc := struct {
@@ -113,10 +111,10 @@ func (app *application) getAllDocumentsAdminHandler(w http.ResponseWriter, r *ht
 			Is_hidden:   document.Is_hidden,
 		}
 
-		responseSlice = append(responseSlice, doc)
+		responses_slice = append(responses_slice, doc)
 	}
 
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
+	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responses_slice}, nil)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}

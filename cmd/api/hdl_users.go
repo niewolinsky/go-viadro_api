@@ -2,11 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 	"viadro_api/internal/data"
-	"viadro_api/internal/logger"
+	"viadro_api/internal/mail"
 	"viadro_api/utils"
 )
 
@@ -31,8 +30,7 @@ func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Reque
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
-		logger.LogError("malformed json request", err) //? http.StatusBadRequest - 400
-		utils.BadRequestResponse(w, r, err)
+		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
 		return
 	}
 
@@ -45,8 +43,7 @@ func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Reque
 
 	err = user.Password.Set(input.Password)
 	if err != nil {
-		logger.LogError("failed to generate password hash", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
@@ -54,49 +51,41 @@ func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrDuplicateEmail):
-			logger.LogError("account with this email already exists", err) //? http.StatusUnprocessableEntity - 422
-			utils.FailedValidationResponse(w, r, map[string]string{"duplicate email": "true"})
+			utils.FailedValidationResponse(w, r, map[string]string{"duplicate email": "true"}) //? http.StatusUnprocessableEntity - 422
 		default:
-			logger.LogError("failed to create new user", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
 
 	token, err := app.data_access.Tokens.New(user.User_id, 3*24*time.Hour, data.ScopeActivation)
 	if err != nil {
-		logger.LogError("failed creating activation token", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
-	fmt.Println("Activation token instead of email: ", token.Plaintext)
-	//!uncomment later
-	// data := map[string]interface{}{
-	// 	"activationToken": token.Plaintext,
-	// 	"userID":          user.ID,
-	// }
+	data := map[string]interface{}{
+		"activation_token": token.Plaintext,
+		"user_id":          user.User_id,
+	}
 
-	// email, err := mail.PrepareEmail(user.Email, "user_welcome.html", data)
-	// if err != nil {
-	// 	logger.LogError("failed to prepare email", err) //? http.StatusInternalServerError - 500
-	// 	utils.ServerErrorResponse(w, r, err)
-	// 	return
-	// }
+	email, err := mail.PrepareEmail(user.Email, "user_welcome.html", data)
+	if err != nil {
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+		return
+	}
 
-	// go func() {
-	// 	err = app.mail_client.DialAndSend(email)
-	// 	if err != nil {
-	// 		logger.LogError("failed to send email", err) //? http.StatusInternalServerError - 500
-	// 		utils.ServerErrorResponse(w, r, err)
-	// 		return
-	// 	}
-	// }()
+	go func() {
+		err = app.mail_client.DialAndSend(email)
+		if err != nil {
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+			return
+		}
+	}()
 
 	err = utils.WriteJSON(w, http.StatusAccepted, utils.Wrap{"user": user}, nil)
 	if err != nil {
-		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 }
@@ -120,8 +109,7 @@ func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Reque
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
-		logger.LogError("malformed request json", err) //? http.StatusBadRequest - 400
-		utils.BadRequestResponse(w, r, err)
+		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
 		return
 	}
 
@@ -129,11 +117,9 @@ func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("invalid or expired token", err) //? http.StatusUnprocessableEntity - 422
-			utils.FailedValidationResponse(w, r, map[string]string{"invalid or expired token": "true"})
+			utils.FailedValidationResponse(w, r, map[string]string{"invalid or expired token": "true"}) //? http.StatusUnprocessableEntity - 422
 		default:
-			logger.LogError("failed getting token for user", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
@@ -142,22 +128,19 @@ func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Reque
 
 	err = app.data_access.Users.Update(user)
 	if err != nil {
-		logger.LogError("failed updating user activated field", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
 	err = app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.User_id)
 	if err != nil {
-		logger.LogError("failed deleting activation token for user", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"user": user}, nil)
 	if err != nil {
-		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 }
 
@@ -181,8 +164,7 @@ func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.R
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
-		logger.LogError("malformed request json", err) //? http.StatusBadRequest - 400
-		utils.BadRequestResponse(w, r, err)
+		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
 		return
 	}
 
@@ -190,11 +172,9 @@ func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("invalid credidentals, user not found", err) //? http.StatusUnauthorized - 401
-			utils.InvalidCredentialsResponse(w, r)
+			utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		default:
-			logger.LogError("failed getting token for user", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
@@ -203,33 +183,41 @@ func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrBadPassword):
-			logger.LogError("invalid credidentals, wrong password", err) //? http.StatusUnauthorized - 401
-			utils.InvalidCredentialsResponse(w, r)
+			utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		default:
-			logger.LogError("failed comparing passwords", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
 
 	token, err := app.data_access.Tokens.New(user.User_id, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
-		logger.LogError("failed creating authentication token", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"authentication_token": token}, nil)
 	if err != nil {
-		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 }
 
+// Delete (deactivate) user
+//
+//	@Summary      Authenticate (login) user
+//	@Description  Authenticate (login) user
+//	@Tags         user
+//	@Produce      json
+//	@Success      201  {string}  "User authenticated"
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      401  {string}  "Bad credentials"
+//	@Failure      404  {string}  "User not found"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /user/authenticate [put]
 func (app *application) userDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
-		utils.NotFoundResponse(w, r)
+		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		return
 	}
 
@@ -237,19 +225,16 @@ func (app *application) userDeleteHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("user not found", err) //? http.StatusUnauthorized - 404
-			utils.NotFoundResponse(w, r)
+			utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		default:
-			logger.LogError("failed to delete user", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
 
-	userCtx := app.contextGetUser(r)
-
-	if user.User_id != userCtx.User_id && !userCtx.Is_admin {
-		utils.InvalidCredentialsResponse(w, r)
+	user_ctx := app.contextGetUser(r)
+	if user.User_id != user_ctx.User_id && !user_ctx.Is_admin {
+		utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		return
 	}
 
@@ -257,18 +242,15 @@ func (app *application) userDeleteHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			logger.LogError("user not found", err) //? http.StatusUnauthorized - 404
-			utils.NotFoundResponse(w, r)
+			utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
 		default:
-			logger.LogError("failed to delete user", err) //? http.StatusInternalServerError - 500
-			utils.ServerErrorResponse(w, r, err)
+			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		}
 		return
 	}
 
-	err = utils.WriteJSON(w, http.StatusNoContent, nil, nil)
+	err = utils.WriteJSON(w, http.StatusOK, nil, nil)
 	if err != nil {
-		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
-		utils.ServerErrorResponse(w, r, err)
+		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 }
