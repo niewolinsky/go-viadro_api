@@ -12,16 +12,15 @@ import (
 )
 
 type application struct {
-	config       config.Config
 	data_access  data.Layers
 	s3_client    *s3.Client
-	cache_client *redis.Client
+	redis_client *redis.Client
 	mail_client  *mail.Client
-	wg           sync.WaitGroup
+	wait_group   sync.WaitGroup
 }
 
 // @title						Viadro API
-// @version					1.0.0
+// @version					0.7.0
 // @description				Open-source document hosting solution based on S3 storage.
 // @contact.name				Viadro API Developer - Przemyslaw Niewolinski
 // @contact.url				https://www.niewolinsky.dev
@@ -36,20 +35,20 @@ type application struct {
 // @license.name				MIT License
 // @license.url				https://github.com/niewolinsky/go-viadro_api/blob/main/license.txt
 func main() {
-	mail_client, aws_s3_client, db_postgre, cache_client, cfg := config.InitConfig()
-	defer db_postgre.Close()
-	defer cache_client.Close()
+	mail_client, s3_client, postgres_client, redis_client, app_port := config.InitConfig()
+	defer postgres_client.Close()
+	defer redis_client.Close()
 
 	app := &application{
-		config:       cfg,
-		data_access:  data.NewLayers(db_postgre),
-		s3_client:    aws_s3_client,
-		cache_client: cache_client,
+		data_access:  data.NewLayers(postgres_client),
+		s3_client:    s3_client,
+		redis_client: redis_client,
 		mail_client:  mail_client,
 	}
 
-	err := app.serve()
+	err := app.serve(app_port)
 	if err != nil {
 		logger.LogFatal("failed starting server", err)
 	}
+	logger.LogInfo("stopped server")
 }

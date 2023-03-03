@@ -22,7 +22,7 @@ import (
 //	@Failure      422  {string}  "User exists"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /user/register [post]
-func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
+func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -40,7 +40,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		Username:  input.Username,
 		Email:     input.Email,
 		Activated: false,
-		IsAdmin:   false,
+		Is_admin:  false,
 	}
 
 	err = user.Password.Set(input.Password)
@@ -63,7 +63,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := app.data_access.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	token, err := app.data_access.Tokens.New(user.User_id, 3*24*time.Hour, data.ScopeActivation)
 	if err != nil {
 		logger.LogError("failed creating activation token", err) //? http.StatusInternalServerError - 500
 		utils.ServerErrorResponse(w, r, err)
@@ -113,7 +113,7 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 //	@Failure      422  {string}  "Invalid or expired token"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /user/activate [put]
-func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
+func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		TokenPlaintext string `json:"token"`
 	}{}
@@ -147,7 +147,7 @@ func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	err = app.data_access.Tokens.DeleteAllForUser(data.ScopeActivation, user.User_id)
 	if err != nil {
 		logger.LogError("failed deleting activation token for user", err) //? http.StatusInternalServerError - 500
 		utils.ServerErrorResponse(w, r, err)
@@ -173,7 +173,7 @@ func (app *application) userActivate(w http.ResponseWriter, r *http.Request) {
 //	@Failure      401  {string}  "Bad credentials"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /user/authenticate [put]
-func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request) {
+func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -212,7 +212,7 @@ func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	token, err := app.data_access.Tokens.New(user.ID, 24*time.Hour, data.ScopeAuthentication)
+	token, err := app.data_access.Tokens.New(user.User_id, 24*time.Hour, data.ScopeAuthentication)
 	if err != nil {
 		logger.LogError("failed creating authentication token", err) //? http.StatusInternalServerError - 500
 		utils.ServerErrorResponse(w, r, err)
@@ -226,7 +226,7 @@ func (app *application) userAuthenticate(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (app *application) userDelete(w http.ResponseWriter, r *http.Request) {
+func (app *application) userDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r)
@@ -248,7 +248,7 @@ func (app *application) userDelete(w http.ResponseWriter, r *http.Request) {
 
 	userCtx := app.contextGetUser(r)
 
-	if user.ID != userCtx.ID && !userCtx.IsAdmin {
+	if user.User_id != userCtx.User_id && !userCtx.Is_admin {
 		utils.InvalidCredentialsResponse(w, r)
 		return
 	}

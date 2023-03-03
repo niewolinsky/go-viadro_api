@@ -30,33 +30,44 @@ var (
 //	@Success      200  {object}   data.Document
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /documents [get]
-func (app *application) listAllVisibleDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
-	if len(qs) == 0 {
-		cachedResponse, err := app.cache_client.Get(context.TODO(), "defaultValues").Result()
-		if err != nil {
-			switch {
-			case (err.Error() == "redis: nil"):
-				fmt.Println("empty cache")
-			default:
-				logger.LogError("cache error", err)
-			}
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(cachedResponse))
-			if err != nil {
-				utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
-			}
-			return
-		}
-	}
+	// if len(qs) == 0 {
+	// 	cachedResponse, err := app.redis_client.Get(context.TODO(), "defaultValues").Result()
+	// 	if err != nil {
+	// 		switch {
+	// 		case (err.Error() == "redis: nil"):
+	// 			fmt.Println("empty cache")
+	// 		default:
+	// 			logger.LogError("cache error", err)
+	// 		}
+	// 	} else {
+	// 		w.Header().Set("Content-Type", "application/json")
+	// 		w.WriteHeader(http.StatusOK)
+	// 		_, err := w.Write([]byte(cachedResponse))
+	// 		if err != nil {
+	// 			utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
+	// 		}
+	// 		return
+	// 	}
+	// }
 
 	input := struct {
 		Title string
 		Tags  []string
+		Owner *int
+		Flag  *int
 		data.Filters
 	}{}
+
+	ownership := utils.ReadStringParam(qs, "owner", "all")
+	if ownership == "me" {
+		user := app.contextGetUser(r)
+		input.Owner = &user.User_id
+	} else if ownership == "-me" {
+		user := app.contextGetUser(r)
+		input.Flag = &user.User_id
+	}
 
 	input.Title = utils.ReadStringParam(qs, "title", "")
 	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
@@ -65,7 +76,7 @@ func (app *application) listAllVisibleDocumentsHandler(w http.ResponseWriter, r 
 	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
 	input.Filters.SortSafelist = []string{"document_id", "-document_id"}
 
-	documents, metadata, err := app.data_access.Documents.GetAllVisible(input.Title, input.Tags, input.Filters)
+	documents, metadata, err := app.data_access.Documents.GetAll(input.Title, input.Tags, input.Owner, input.Flag, input.Filters)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
@@ -75,13 +86,15 @@ func (app *application) listAllVisibleDocumentsHandler(w http.ResponseWriter, r 
 
 	for _, document := range documents {
 		doc := struct {
-			ID          int64     `json:"document_id"`
+			ID          int       `json:"document_id"`
+			User_id     int       `json:"user_id"`
 			Title       string    `json:"title"`
 			Link        string    `json:"link"`
 			Tags        []string  `json:"tags"`
 			Uploaded_at time.Time `json:"created_at"`
 		}{
 			ID:          document.Document_id,
+			User_id:     document.User_id,
 			Title:       document.Title,
 			Link:        document.Url_s3,
 			Tags:        document.Tags,
@@ -96,123 +109,9 @@ func (app *application) listAllVisibleDocumentsHandler(w http.ResponseWriter, r 
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 	}
 
-	err = app.cache_client.Set(context.TODO(), "defaultValues", jsonData, time.Hour*24).Err()
+	err = app.redis_client.Set(context.TODO(), "defaultValues", jsonData, time.Hour*24).Err()
 	if err != nil {
 		logger.LogError("failed caching response", err)
-	}
-}
-
-// TODO: admin route
-func (app *application) listAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
-	qs := r.URL.Query()
-
-	input := struct {
-		Title string
-		Tags  []string
-		data.Filters
-	}{}
-
-	input.Title = utils.ReadStringParam(qs, "title", "")
-	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
-	input.Filters.Page = utils.ReadIntParam(qs, "page", 1)
-	input.Filters.PageSize = utils.ReadIntParam(qs, "page_size", 20)
-	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
-	input.Filters.SortSafelist = []string{"document_id", "-document_id"}
-
-	documents, metadata, err := app.data_access.Documents.GetAll(input.Title, input.Tags, input.Filters)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
-		return
-	}
-
-	responseSlice := []interface{}{}
-
-	for _, document := range documents {
-		doc := struct {
-			ID          int64     `json:"document_id"`
-			Title       string    `json:"title"`
-			Link        string    `json:"link"`
-			Tags        []string  `json:"tags"`
-			Uploaded_at time.Time `json:"created_at"`
-			Is_hidden   bool      `json:"is_hidden"`
-		}{
-			ID:          document.Document_id,
-			Title:       document.Title,
-			Link:        document.Url_s3,
-			Tags:        document.Tags,
-			Uploaded_at: document.Uploaded_at,
-			Is_hidden:   document.Is_hidden,
-		}
-
-		responseSlice = append(responseSlice, doc)
-	}
-
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
-	}
-}
-
-// List all user's documents
-//
-//	@Summary      List all user's documents
-//	@Description  List all user's documents
-//	@Tags         documents
-//	@Produce      json
-//	@Success      200  {object}   data.Document
-//	@Failure      401  {string}  "Unauthorized"
-//	@Failure      500  {string}  "Internal server error"
-//	@Router       /documents/my [get]
-func (app *application) listUserDocumentsHandler(w http.ResponseWriter, r *http.Request) {
-	qs := r.URL.Query()
-
-	input := struct {
-		Title string
-		Tags  []string
-		data.Filters
-	}{}
-
-	input.Title = utils.ReadStringParam(qs, "title", "")
-	input.Tags = utils.ReadCSVParam(qs, "tags", []string{})
-
-	input.Filters.Page = utils.ReadIntParam(qs, "page", 1)
-	input.Filters.PageSize = utils.ReadIntParam(qs, "page_size", 20)
-	input.Filters.Sort = utils.ReadStringParam(qs, "sort", "document_id")
-	input.Filters.SortSafelist = []string{"document_id", "-document_id"}
-
-	user := app.contextGetUser(r)
-
-	documents, metadata, err := app.data_access.Documents.GetUserAll(input.Title, input.Tags, input.Filters, user.ID)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
-		return
-	}
-
-	responseSlice := []interface{}{}
-
-	for _, document := range documents {
-		doc := struct {
-			ID          int64     `json:"document_id"`
-			Title       string    `json:"title"`
-			Link        string    `json:"link"`
-			Tags        []string  `json:"tags"`
-			Uploaded_at time.Time `json:"created_at"`
-			Is_hidden   bool      `json:"is_hidden"`
-		}{
-			ID:          document.Document_id,
-			Title:       document.Title,
-			Link:        document.Url_s3,
-			Tags:        document.Tags,
-			Uploaded_at: document.Uploaded_at,
-			Is_hidden:   document.Is_hidden,
-		}
-
-		responseSlice = append(responseSlice, doc)
-	}
-
-	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"metadata": metadata, "documents": responseSlice}, nil)
-	if err != nil {
-		utils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -244,7 +143,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	user := app.contextGetUser(r)
 
 	document := &data.Document{
-		User_id:   user.ID,
+		User_id:   user.User_id,
 		Filetype:  ".pdf",
 		Title:     file_data.Filename,
 		Tags:      input.Tags,
@@ -279,7 +178,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		utils.ServerErrorResponse(w, r, err)
 	}
 
-	err = app.cache_client.FlushAll(context.TODO()).Err()
+	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
 		logger.LogError("Failed flushing cache", err)
 	}
@@ -311,7 +210,7 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 
 	user := app.contextGetUser(r)
 
-	if document.User_id != user.ID && !user.IsAdmin {
+	if document.User_id != user.User_id && !user.Is_admin {
 		utils.InvalidCredentialsResponse(w, r)
 		return
 	}
@@ -337,7 +236,7 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 		utils.ServerErrorResponse(w, r, err)
 	}
 
-	err = app.cache_client.FlushAll(context.TODO()).Err()
+	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
 		logger.LogError("Failed flushing cache", err)
 	}
@@ -376,7 +275,7 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	user := app.contextGetUser(r)
 
-	if document.Is_hidden && document.User_id != user.ID && !user.IsAdmin {
+	if document.Is_hidden && document.User_id != user.User_id && !user.Is_admin {
 		utils.InvalidCredentialsResponse(w, r) //? http.StatusUnauthorized - 401
 		return
 	}
@@ -420,7 +319,7 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 
 	user := app.contextGetUser(r)
 
-	if document.User_id != user.ID && !user.IsAdmin {
+	if document.User_id != user.User_id && !user.Is_admin {
 		utils.InvalidCredentialsResponse(w, r)
 		return
 	}
@@ -432,7 +331,7 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 	}
 
 	doc := struct {
-		ID          int64     `json:"document_id"`
+		ID          int       `json:"document_id"`
 		Title       string    `json:"title"`
 		Link        string    `json:"link"`
 		Tags        []string  `json:"tags"`
@@ -452,7 +351,7 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 		utils.ServerErrorResponse(w, r, err)
 	}
 
-	err = app.cache_client.FlushAll(context.TODO()).Err()
+	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
 		logger.LogError("Failed flushing cache", err)
 	}

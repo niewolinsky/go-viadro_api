@@ -36,6 +36,6 @@ func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Reques
 //	@Success      200  {string}  "Page loaded"
 //	@Failure      404  {string}  "Page not found"
 //	@Router       /documentation/index.html [get]
-func (app *application) documentationHandler(res http.ResponseWriter, req *http.Request, p httprouter.Params) {
-	httpSwagger.WrapHandler(res, req)
+func (app *application) documentationHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	httpSwagger.WrapHandler(w, r)
 }

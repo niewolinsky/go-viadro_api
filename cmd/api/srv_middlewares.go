@@ -95,7 +95,7 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 func (app *application) requireAdminUser(next http.HandlerFunc) http.HandlerFunc {
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
-		if !user.IsAdmin {
+		if !user.Is_admin {
 			utils.NotAdminResponse(w, r)
 			return
 		}

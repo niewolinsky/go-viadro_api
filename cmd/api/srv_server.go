@@ -12,48 +12,51 @@ import (
 	"viadro_api/internal/logger"
 )
 
-func (app *application) serve() error {
+func (app *application) serve(app_port string) error {
 	srv := http.Server{
-		Addr:         fmt.Sprintf(":%d", app.config.Port),
+		Addr:         fmt.Sprintf(":%s", app_port),
 		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  time.Minute,
+		WriteTimeout: time.Minute,
 	}
 
-	shutdownError := make(chan error)
+	shutdown_signal := make(chan error)
 
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
-		logger.LogInfo(s.String())
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		logger.LogInfo(fmt.Sprintf("shutdown signal: %s", s.String()))
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		err := srv.Shutdown(ctx)
 		if err != nil {
-			shutdownError <- err
+			shutdown_signal <- err
 		}
 
-		logger.LogInfo("completing background tasks")
+		logger.LogInfo("waiting for background tasks to finish")
 
-		app.wg.Wait()
-		shutdownError <- nil
+		app.wait_group.Wait()
+		shutdown_signal <- nil
 	}()
 
 	logger.LogInfo("starting server")
-
 	err := srv.ListenAndServe()
-	if !errors.Is(err, http.ErrServerClosed) {
-		return err
+	if err != nil {
+		switch {
+		case errors.Is(err, http.ErrServerClosed):
+			return nil
+		default:
+			return err
+		}
 	}
 
-	err = <-shutdownError
+	err = <-shutdown_signal
 	if err != nil {
 		return err
 	}
 
-	logger.LogInfo("stopped server")
 	return nil
 }

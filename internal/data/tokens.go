@@ -18,7 +18,7 @@ const (
 type Token struct {
 	Plaintext string    `json:"token"`
 	Hash      []byte    `json:"-"`
-	UserID    int64     `json:"-"`
+	User_id   int       `json:"-"`
 	Expiry    time.Time `json:"expiry"`
 	Scope     string    `json:"-"`
 }
@@ -27,11 +27,11 @@ type TokenLayer struct {
 	DB *pgxpool.Pool
 }
 
-func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
+func generateToken(userID int, ttl time.Duration, scope string) (*Token, error) {
 	token := &Token{
-		UserID: userID,
-		Expiry: time.Now().Add(ttl),
-		Scope:  scope,
+		User_id: userID,
+		Expiry:  time.Now().Add(ttl),
+		Scope:   scope,
 	}
 
 	randomBytes := make([]byte, 16)
@@ -49,7 +49,7 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 	return token, nil
 }
 
-func (t TokenLayer) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+func (t TokenLayer) New(userID int, ttl time.Duration, scope string) (*Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (t TokenLayer) Insert(token *Token) error {
 		VALUES ($1, $2, $3, $4)
 	`
 
-	args := []interface{}{token.Hash, token.UserID, token.Expiry, token.Scope}
+	args := []interface{}{token.Hash, token.User_id, token.Expiry, token.Scope}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -82,7 +82,7 @@ func (t TokenLayer) Insert(token *Token) error {
 	return nil
 }
 
-func (t TokenLayer) DeleteAllForUser(scope string, userID int64) error {
+func (t TokenLayer) DeleteAllForUser(scope string, userID int) error {
 	query := `
 		DELETE FROM tokens
 		WHERE scope = $1 AND user_id = $2

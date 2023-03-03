@@ -30,13 +30,13 @@ type password struct {
 var AnonymousUser = &User{}
 
 type User struct {
-	ID        int64     `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  password  `json:"-"`
-	Activated bool      `json:"activated"`
-	IsAdmin   bool      `json:"is_admin"`
+	User_id    int       `json:"user_id"`
+	Created_at time.Time `json:"created_at"`
+	Username   string    `json:"username"`
+	Email      string    `json:"email"`
+	Password   password  `json:"-"`
+	Activated  bool      `json:"activated"`
+	Is_admin   bool      `json:"is_admin"`
 }
 
 func (u *User) IsAnonymous() bool {
@@ -73,14 +73,14 @@ func (u UserLayer) Insert(user *User) error {
 	query := `
 		INSERT INTO users (username, email, password_hash, activated, is_admin)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at
+		RETURNING user_id, created_at
 	`
-	args := []interface{}{user.Username, user.Email, user.Password.hash, user.Activated, user.IsAdmin}
+	args := []interface{}{user.Username, user.Email, user.Password.hash, user.Activated, user.Is_admin}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := u.DB.QueryRow(ctx, query, args...).Scan(&user.ID, &user.CreatedAt)
+	err := u.DB.QueryRow(ctx, query, args...).Scan(&user.User_id, &user.Created_at)
 	if err != nil {
 		switch {
 		case err.Error() == `ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505)`:
@@ -97,7 +97,7 @@ func (u UserLayer) Update(user *User) error {
 	query := `
 		UPDATE users
 		SET username = $1, email = $2, password_hash = $3, activated = $4, is_admin = $5
-		WHERE id = $6
+		WHERE user_id = $6
 	`
 
 	args := []interface{}{
@@ -105,8 +105,8 @@ func (u UserLayer) Update(user *User) error {
 		user.Email,
 		user.Password.hash,
 		user.Activated,
-		user.IsAdmin,
-		user.ID,
+		user.Is_admin,
+		user.User_id,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -124,10 +124,10 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
 
 	query := `
-		SELECT users.id, users.created_at, users.username, users.email, users.password_hash, users.activated, users.is_admin
+		SELECT users.user_id, users.created_at, users.username, users.email, users.password_hash, users.activated, users.is_admin
 		FROM users
 		INNER JOIN tokens
-		ON users.id = tokens.user_id
+		ON users.user_id = tokens.user_id
 		WHERE tokens.hash = $1
 		AND tokens.scope = $2
 		AND tokens.expiry > $3
@@ -141,13 +141,13 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 	user := User{}
 
 	err := u.DB.QueryRow(ctx, query, args...).Scan(
-		&user.ID,
-		&user.CreatedAt,
+		&user.User_id,
+		&user.Created_at,
 		&user.Username,
 		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
-		&user.IsAdmin,
+		&user.Is_admin,
 	)
 	if err != nil {
 		switch {
@@ -163,7 +163,7 @@ func (u UserLayer) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 
 func (u UserLayer) GetByEmail(email string) (*User, error) {
 	query := `
-		SELECT id, created_at, username, email, password_hash, activated, is_admin
+		SELECT user_id, created_at, username, email, password_hash, activated, is_admin
 		FROM users
 		WHERE email = $1
 	`
@@ -174,13 +174,13 @@ func (u UserLayer) GetByEmail(email string) (*User, error) {
 	user := User{}
 
 	err := u.DB.QueryRow(ctx, query, email).Scan(
-		&user.ID,
-		&user.CreatedAt,
+		&user.User_id,
+		&user.Created_at,
 		&user.Username,
 		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
-		&user.IsAdmin,
+		&user.Is_admin,
 	)
 	if err != nil {
 		switch {
@@ -194,11 +194,11 @@ func (u UserLayer) GetByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
-func (u UserLayer) GetById(id int64) (*User, error) {
+func (u UserLayer) GetById(id int) (*User, error) {
 	query := `
-		SELECT id, created_at, username, email, password_hash, activated, is_admin
+		SELECT user_id, created_at, username, email, password_hash, activated, is_admin
 		FROM users
-		WHERE id = $1
+		WHERE user_id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -207,13 +207,13 @@ func (u UserLayer) GetById(id int64) (*User, error) {
 	user := User{}
 
 	err := u.DB.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.CreatedAt,
+		&user.User_id,
+		&user.Created_at,
 		&user.Username,
 		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
-		&user.IsAdmin,
+		&user.Is_admin,
 	)
 	if err != nil {
 		switch {
@@ -229,7 +229,7 @@ func (u UserLayer) GetById(id int64) (*User, error) {
 
 func (u UserLayer) GetAll() ([]User, error) {
 	query := `
-		SELECT id, username, email, created_at, activated, is_admin
+		SELECT user_id, username, email, created_at, activated, is_admin
 		FROM users
 	`
 
@@ -247,12 +247,12 @@ func (u UserLayer) GetAll() ([]User, error) {
 	for rows.Next() {
 		user := User{}
 		err := rows.Scan(
-			&user.ID,
+			&user.User_id,
 			&user.Username,
 			&user.Email,
-			&user.CreatedAt,
+			&user.Created_at,
 			&user.Activated,
-			&user.IsAdmin,
+			&user.Is_admin,
 		)
 		if err != nil {
 			return nil, err
@@ -266,10 +266,10 @@ func (u UserLayer) GetAll() ([]User, error) {
 	return users, nil
 }
 
-func (u UserLayer) Delete(id int64) error {
+func (u UserLayer) Delete(id int) error {
 	query := `
 		DELETE FROM users
-		WHERE id = $1
+		WHERE user_id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
