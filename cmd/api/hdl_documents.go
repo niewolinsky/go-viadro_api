@@ -150,12 +150,17 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 		Is_hidden: input.Is_hidden,
 	}
 
+	disposition := "inline"
+	contentType := "application/pdf"
+
 	uploader := manager.NewUploader(app.s3_client)
 	res, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(os.Getenv("AWS_S3_BUCKET_NAME")),
-		Key:    aws.String(document.Title),
-		Body:   file,
-		ACL:    "public-read",
+		Bucket:             aws.String(os.Getenv("AWS_S3_BUCKET_NAME")),
+		Key:                aws.String(document.Title),
+		Body:               file,
+		ACL:                "public-read",
+		ContentDisposition: &disposition,
+		ContentType:        &contentType,
 	})
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
