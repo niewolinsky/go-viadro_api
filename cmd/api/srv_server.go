@@ -14,6 +14,7 @@ import (
 
 func (app *application) serve(app_port string) error {
 	srv := http.Server{
+		//add TLS config
 		Addr:         fmt.Sprintf(":%s", app_port),
 		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,

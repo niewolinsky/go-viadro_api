@@ -30,6 +30,120 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/documents": {
+            "put": {
+                "description": "Get all documents regardless of visibility",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get all documents regardless of visibility",
+                "responses": {
+                    "200": {
+                        "description": "User activated",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad json request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/user/:id": {
+            "patch": {
+                "description": "Grant admin privileges",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Grant admin privileges",
+                "responses": {
+                    "200": {
+                        "description": "User activated",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad json request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "description": "Get all users",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get all users",
+                "responses": {
+                    "200": {
+                        "description": "User activated",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad json request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid or expired token",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/document": {
             "post": {
                 "description": "Add single document",
@@ -233,38 +347,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/documents/my": {
-            "get": {
-                "description": "List all user's documents",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "documents"
-                ],
-                "summary": "List all user's documents",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/data.Document"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/healthcheck": {
             "get": {
                 "description": "Check service status",
@@ -335,9 +417,6 @@ const docTemplate = `{
         "/user/authenticate": {
             "put": {
                 "description": "Authenticate (login) user",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -360,6 +439,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Bad credentials",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
                         "schema": {
                             "type": "string"
                         }
@@ -460,7 +545,10 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
-                "id": {
+                "is_admin": {
+                    "type": "boolean"
+                },
+                "user_id": {
                     "type": "integer"
                 },
                 "username": {
@@ -478,7 +566,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0.0",
+	Version:          "0.7.0",
 	Host:             "viadro.xyz:4000",
 	BasePath:         "/v1/",
 	Schemes:          []string{"https"},

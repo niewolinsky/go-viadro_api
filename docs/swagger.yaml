@@ -32,7 +32,9 @@ definitions:
         type: string
       email:
         type: string
-      id:
+      is_admin:
+        type: boolean
+      user_id:
         type: integer
       username:
         type: string
@@ -48,8 +50,83 @@ info:
     name: MIT License
     url: https://github.com/niewolinsky/go-viadro_api/blob/main/license.txt
   title: Viadro API
-  version: 1.0.0
+  version: 0.7.0
 paths:
+  /admin/documents:
+    put:
+      description: Get all documents regardless of visibility
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User activated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: Invalid or expired token
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get all documents regardless of visibility
+      tags:
+      - admin
+  /admin/user/:id:
+    patch:
+      description: Grant admin privileges
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User activated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: Invalid or expired token
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Grant admin privileges
+      tags:
+      - admin
+  /admin/users:
+    get:
+      description: Get all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User activated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: Invalid or expired token
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get all users
+      tags:
+      - admin
   /document:
     post:
       consumes:
@@ -184,27 +261,6 @@ paths:
       summary: List all visible (public) documents
       tags:
       - documents
-  /documents/my:
-    get:
-      description: List all user's documents
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/data.Document'
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-        "500":
-          description: Internal server error
-          schema:
-            type: string
-      summary: List all user's documents
-      tags:
-      - documents
   /healthcheck:
     get:
       description: Check service status
@@ -251,8 +307,6 @@ paths:
       - user
   /user/authenticate:
     put:
-      consumes:
-      - application/json
       description: Authenticate (login) user
       produces:
       - application/json
@@ -267,6 +321,10 @@ paths:
             type: string
         "401":
           description: Bad credentials
+          schema:
+            type: string
+        "404":
+          description: User not found
           schema:
             type: string
         "500":

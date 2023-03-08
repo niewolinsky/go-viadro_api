@@ -9,18 +9,17 @@ import (
 	"viadro_api/utils"
 )
 
-// Activate user account
+// Grant admin privileges
 //
-//	@Summary      Activate user account
-//	@Description  Activate user account
-//	@Tags         user
-//	@Accept      json
+//	@Summary      Grant admin privileges
+//	@Description  Grant admin privileges
+//	@Tags         admin
 //	@Produce      json
 //	@Success      200  {string}  "User activated"
 //	@Failure      400  {string}  "Bad json request"
 //	@Failure      422  {string}  "Invalid or expired token"
 //	@Failure      500  {string}  "Internal server error"
-//	@Router       /user/activate [put]
+//	@Router       /admin/user/:id [patch]
 func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
@@ -55,6 +54,17 @@ func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.R
 	}
 }
 
+// Get all users
+//
+//	@Summary      Get all users
+//	@Description  Get all users
+//	@Tags         admin
+//	@Produce      json
+//	@Success      200  {string}  "User activated"
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      422  {string}  "Invalid or expired token"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /admin/users [get]
 func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	users, err := app.data_access.Users.GetAll()
 	if err != nil {
@@ -68,6 +78,17 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// Get all documents regardless of visibility
+//
+//	@Summary      Get all documents regardless of visibility
+//	@Description  Get all documents regardless of visibility
+//	@Tags         admin
+//	@Produce      json
+//	@Success      200  {string}  "User activated"
+//	@Failure      400  {string}  "Bad json request"
+//	@Failure      422  {string}  "Invalid or expired token"
+//	@Failure      500  {string}  "Internal server error"
+//	@Router       /admin/documents [put]
 func (app *application) getAllDocumentsAdminHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
 
