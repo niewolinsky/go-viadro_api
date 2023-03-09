@@ -187,14 +187,14 @@ const docTemplate = `{
         },
         "/document/:id": {
             "get": {
-                "description": "Delete document",
+                "description": "Get document details",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "document"
                 ],
-                "summary": "Delete document",
+                "summary": "Get document details",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -328,7 +328,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "documents"
+                    "document"
                 ],
                 "summary": "List all visible (public) documents",
                 "responses": {
@@ -360,6 +360,89 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Service available",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user": {
+            "post": {
+                "description": "Register a new user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Register a new user",
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/data.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad json request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "422": {
+                        "description": "User exists",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete (deactivate) user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Delete (deactivate) user",
+                "responses": {
+                    "201": {
+                        "description": "User authenticated",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad json request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Bad credentials",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
                         "schema": {
                             "type": "string"
                         }
@@ -417,6 +500,9 @@ const docTemplate = `{
         "/user/authenticate": {
             "put": {
                 "description": "Authenticate (login) user",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -439,53 +525,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Bad credentials",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/register": {
-            "post": {
-                "description": "Register a new user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user"
-                ],
-                "summary": "Register a new user",
-                "responses": {
-                    "202": {
-                        "description": "Accepted",
-                        "schema": {
-                            "$ref": "#/definitions/data.User"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad json request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "422": {
-                        "description": "User exists",
                         "schema": {
                             "type": "string"
                         }

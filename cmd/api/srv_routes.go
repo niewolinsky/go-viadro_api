@@ -21,7 +21,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/document/:id", app.requireActivatedUser(app.toggleDocumentVisibilityHandler))
 
 	//?user routes
-	router.HandlerFunc(http.MethodPost, "/v1/user/register", app.userRegisterHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/user", app.userRegisterHandler)
 	router.HandlerFunc(http.MethodPut, "/v1/user/activate", app.userActivateHandler)
 	router.HandlerFunc(http.MethodPut, "/v1/user/authenticate", app.userAuthenticateHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/user/:id", app.requireActivatedUser(app.userDeleteHandler))

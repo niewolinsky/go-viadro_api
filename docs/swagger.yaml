@@ -180,7 +180,7 @@ paths:
       tags:
       - document
     get:
-      description: Delete document
+      description: Get document details
       produces:
       - application/json
       responses:
@@ -200,7 +200,7 @@ paths:
           description: Internal server error
           schema:
             type: string
-      summary: Delete document
+      summary: Get document details
       tags:
       - document
     patch:
@@ -260,7 +260,7 @@ paths:
             type: string
       summary: List all visible (public) documents
       tags:
-      - documents
+      - document
   /healthcheck:
     get:
       description: Check service status
@@ -278,6 +278,61 @@ paths:
       summary: Check service status
       tags:
       - utility
+  /user:
+    delete:
+      description: Delete (deactivate) user
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User authenticated
+          schema:
+            type: string
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "401":
+          description: Bad credentials
+          schema:
+            type: string
+        "404":
+          description: User not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete (deactivate) user
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/data.User'
+        "400":
+          description: Bad json request
+          schema:
+            type: string
+        "422":
+          description: User exists
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Register a new user
+      tags:
+      - user
   /user/activate:
     put:
       consumes:
@@ -307,6 +362,8 @@ paths:
       - user
   /user/authenticate:
     put:
+      consumes:
+      - application/json
       description: Authenticate (login) user
       produces:
       - application/json
@@ -323,42 +380,11 @@ paths:
           description: Bad credentials
           schema:
             type: string
-        "404":
-          description: User not found
-          schema:
-            type: string
         "500":
           description: Internal server error
           schema:
             type: string
       summary: Authenticate (login) user
-      tags:
-      - user
-  /user/register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user
-      produces:
-      - application/json
-      responses:
-        "202":
-          description: Accepted
-          schema:
-            $ref: '#/definitions/data.User'
-        "400":
-          description: Bad json request
-          schema:
-            type: string
-        "422":
-          description: User exists
-          schema:
-            type: string
-        "500":
-          description: Internal server error
-          schema:
-            type: string
-      summary: Register a new user
       tags:
       - user
 produces:

@@ -25,7 +25,7 @@ var (
 //
 //	@Summary      List all visible (public) documents
 //	@Description  List all visible (public) documents
-//	@Tags         documents
+//	@Tags         document
 //	@Produce      json
 //	@Success      200  {object}   data.Document
 //	@Failure      500  {string}  "Internal server error"
@@ -249,8 +249,8 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 
 // Get document details
 //
-//	@Summary      Delete document
-//	@Description  Delete document
+//	@Summary      Get document details
+//	@Description  Get document details
 //	@Tags         document
 //	@Produce      json
 //	@Success      200  {string}  data.Document

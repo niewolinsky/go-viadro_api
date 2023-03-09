@@ -20,7 +20,7 @@ import (
 //	@Failure      400  {string}  "Bad json request"
 //	@Failure      422  {string}  "User exists"
 //	@Failure      500  {string}  "Internal server error"
-//	@Router       /user/register [post]
+//	@Router       /user [post]
 func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Username string `json:"username"`
@@ -204,8 +204,8 @@ func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.R
 
 // Delete (deactivate) user
 //
-//	@Summary      Authenticate (login) user
-//	@Description  Authenticate (login) user
+//	@Summary      Delete (deactivate) user
+//	@Description  Delete (deactivate) user
 //	@Tags         user
 //	@Produce      json
 //	@Success      201  {string}  "User authenticated"
@@ -213,7 +213,7 @@ func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.R
 //	@Failure      401  {string}  "Bad credentials"
 //	@Failure      404  {string}  "User not found"
 //	@Failure      500  {string}  "Internal server error"
-//	@Router       /user/authenticate [put]
+//	@Router       /user [delete]
 func (app *application) userDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
