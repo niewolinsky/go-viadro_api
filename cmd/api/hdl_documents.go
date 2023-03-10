@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"viadro_api/internal/data"
-	"viadro_api/internal/logger"
 	"viadro_api/utils"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
@@ -39,7 +40,7 @@ func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Re
 			case (err.Error() == "redis: nil"):
 				fmt.Println("empty cache")
 			default:
-				logger.LogError("cache error", err)
+				log.Error("cache error", err)
 			}
 		} else {
 			w.Header().Set("Content-Type", "application/json")
@@ -111,7 +112,7 @@ func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Re
 
 	err = app.redis_client.Set(context.TODO(), "defaultValues", jsonData, time.Hour*24).Err()
 	if err != nil {
-		logger.LogError("failed caching response", err)
+		log.Error("failed caching response", err)
 	}
 }
 
@@ -185,7 +186,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
-		logger.LogError("Failed flushing cache", err)
+		log.Error("Failed flushing cache", err)
 	}
 }
 
@@ -243,7 +244,7 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
-		logger.LogError("Failed flushing cache", err)
+		log.Error("Failed flushing cache", err)
 	}
 }
 
@@ -354,6 +355,6 @@ func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r
 
 	err = app.redis_client.FlushAll(context.TODO()).Err()
 	if err != nil {
-		logger.LogError("Failed flushing cache", err)
+		log.Error("Failed flushing cache", err)
 	}
 }

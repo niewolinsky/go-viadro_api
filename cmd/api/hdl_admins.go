@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 	"viadro_api/internal/data"
-	"viadro_api/internal/logger"
 	"viadro_api/utils"
+
+	"github.com/charmbracelet/log"
 )
 
 // Grant admin privileges
@@ -42,14 +43,14 @@ func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.R
 
 	err = app.data_access.Users.Update(user)
 	if err != nil {
-		logger.LogError("failed updating user activated field", err) //? http.StatusInternalServerError - 500
+		log.Error("failed updating user activated field", err) //? http.StatusInternalServerError - 500
 		utils.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	err = utils.WriteJSON(w, http.StatusOK, utils.Wrap{"user": user}, nil)
 	if err != nil {
-		logger.LogError("failed to write response", err) //? http.StatusInternalServerError - 500
+		log.Error("failed to write response", err) //? http.StatusInternalServerError - 500
 		utils.ServerErrorResponse(w, r, err)
 	}
 }

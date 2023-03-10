@@ -4,8 +4,9 @@ import (
 	"net/http"
 
 	_ "viadro_api/docs"
-	"viadro_api/internal/logger"
 	"viadro_api/utils"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/julienschmidt/httprouter"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -23,7 +24,7 @@ import (
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	err := utils.WriteJSON(w, http.StatusOK, utils.Wrap{"status": "Status OK"}, nil)
 	if err != nil {
-		logger.LogError("Unable to send healthcheckHandler response", err)
+		log.Error("Unable to send healthcheckHandler response", err)
 	}
 }
 

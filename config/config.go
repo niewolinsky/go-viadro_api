@@ -3,13 +3,12 @@ package config
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"strconv"
-	"viadro_api/internal/logger"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/charmbracelet/log"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
@@ -84,9 +83,9 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, *redis.Client, strin
 
 	err := godotenv.Load()
 	if err != nil {
-		logger.LogFatal("failed loading environment variables", err)
+		log.Fatal("failed loading environment variables", err)
 	}
-	logger.LogInfo("environment variables loaded")
+	log.Info("environment variables loaded")
 
 	//?APP
 	flag.StringVar(&config.port, "port", os.Getenv("APP_PORT"), "application erver port")
@@ -101,7 +100,7 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, *redis.Client, strin
 	flag.StringVar(&config.cache.password, "redis_password", os.Getenv("REDIS_PASSWORD"), "Redis Password")
 	REDIS_INDEX, err := strconv.Atoi(os.Getenv("REDIS_INDEX"))
 	if err != nil {
-		logger.LogFatal("failed setting redis index", err)
+		log.Fatal("failed setting redis index", err)
 	}
 	flag.IntVar(&config.cache.index, "redis_index", REDIS_INDEX, "Redis Cache Number")
 
@@ -117,31 +116,31 @@ func InitConfig() (*mail.Client, *s3.Client, *pgxpool.Pool, *redis.Client, strin
 	flag.StringVar(&config.smtp.sender, "smtp_sender", os.Getenv("SMTP_SENDER"), "SMTP sender")
 
 	flag.Parse()
-	logger.LogInfo("command line variables loaded")
+	log.Info("command line variables loaded")
 
 	postgres_client, err := initializePostgresClient(config)
 	if err != nil {
-		logger.LogFatal("failed initializing postgres client", err)
+		log.Fatal("failed initializing postgres client", err)
 	}
-	logger.LogInfo("postgres client initialized")
+	log.Info("postgres client initialized")
 
 	redis_client, err := initializeRedisClient(config)
 	if err != nil {
-		logger.LogFatal("failed initializing redis client", err)
+		log.Fatal("failed initializing redis client", err)
 	}
-	logger.LogInfo("redis client initialized")
+	log.Info("redis client initialized")
 
 	s3_client, err := initializeS3Client()
 	if err != nil {
-		logger.LogFatal("failed initializing s3 client", err)
+		log.Fatal("failed initializing s3 client", err)
 	}
-	logger.LogInfo("s3 client initialized")
+	log.Info("s3 client initialized")
 
 	mail_client, err := initializeMailClient(config)
 	if err != nil {
-		logger.LogFatal("failed initializing mail client", err)
+		log.Fatal("failed initializing mail client", err)
 	}
-	logger.LogInfo("mail client initialized")
+	log.Info("mail client initialized")
 
 	return mail_client, s3_client, postgres_client, redis_client, config.port
 }

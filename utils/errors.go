@@ -3,7 +3,8 @@ package utils
 import (
 	"fmt"
 	"net/http"
-	"viadro_api/internal/logger"
+
+	"github.com/charmbracelet/log"
 )
 
 func errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
@@ -11,17 +12,13 @@ func errorResponse(w http.ResponseWriter, r *http.Request, status int, message i
 
 	err := WriteJSON(w, status, env, nil)
 	if err != nil {
-		logError(r, err)
+		log.Error(fmt.Sprintf("Method: %s, Url: %s", r.Method, r.URL.String()), err)
 		w.WriteHeader(500)
 	}
 }
 
-func logError(r *http.Request, err error) {
-	logger.LogError(fmt.Sprintf("Method: %s, Url: %s", r.Method, r.URL.String()), err)
-}
-
 func ServerErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
-	logError(r, err)
+	log.Error(fmt.Sprintf("Method: %s, Url: %s", r.Method, r.URL.String()), err)
 	message := "the server encountered a problem and could not process your request"
 	errorResponse(w, r, http.StatusInternalServerError, message)
 }

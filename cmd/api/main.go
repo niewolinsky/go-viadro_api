@@ -4,9 +4,9 @@ import (
 	"sync"
 	"viadro_api/config"
 	"viadro_api/internal/data"
-	"viadro_api/internal/logger"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/charmbracelet/log"
 	"github.com/redis/go-redis/v9"
 	"github.com/wneessen/go-mail"
 )
@@ -48,7 +48,7 @@ func main() {
 
 	err := app.serve(app_port)
 	if err != nil {
-		logger.LogFatal("failed starting server", err)
+		log.Fatal("failed starting server", err)
 	}
-	logger.LogInfo("stopped server")
+	log.Info("stopped server")
 }

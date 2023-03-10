@@ -9,7 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"viadro_api/internal/logger"
+
+	"github.com/charmbracelet/log"
 )
 
 func (app *application) serve(app_port string) error {
@@ -28,7 +29,7 @@ func (app *application) serve(app_port string) error {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
-		logger.LogInfo(fmt.Sprintf("shutdown signal: %s", s.String()))
+		log.Info(fmt.Sprintf("shutdown signal: %s", s.String()))
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -37,13 +38,13 @@ func (app *application) serve(app_port string) error {
 			shutdown_signal <- err
 		}
 
-		logger.LogInfo("waiting for background tasks to finish")
+		log.Info("waiting for background tasks to finish")
 
 		app.wait_group.Wait()
 		shutdown_signal <- nil
 	}()
 
-	logger.LogInfo("starting server")
+	log.Info("starting server")
 	err := srv.ListenAndServe()
 	if err != nil {
 		switch {
