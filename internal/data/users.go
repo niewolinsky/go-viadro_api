@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -276,14 +275,11 @@ func (u UserLayer) Delete(id int) error {
 	defer cancel()
 
 	_, err := u.DB.Exec(ctx, query, id)
-	fmt.Println(err)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			fmt.Println(err)
 			return ErrRecordNotFound
 		default:
-			fmt.Println(err)
 			return err
 		}
 	}

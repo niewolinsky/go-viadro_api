@@ -221,11 +221,10 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	output, err := app.s3_client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
-		Bucket: aws.String("viadro-api"),
+	_, err = app.s3_client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(os.Getenv("AWS_S3_BUCKET_NAME")),
 		Key:    aws.String(document.Title),
 	})
-	fmt.Println("OUTPUT: ", output)
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
 		return
