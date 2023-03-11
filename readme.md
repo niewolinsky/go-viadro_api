@@ -77,5 +77,7 @@ After configuring required services run database migrations using *migrate* tool
 ### Service utilizes AWS cloud services:
 - EC2, SES, S3, RDS, ElastiCache
 
+![App Architecture](https://i.imgur.com/fxKVSEH.png)
+
 ## Additional info
 Application is actively developed and it is not production ready yet.
