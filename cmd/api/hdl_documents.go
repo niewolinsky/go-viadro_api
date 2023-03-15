@@ -11,11 +11,10 @@ import (
 	"viadro_api/internal/data"
 	"viadro_api/utils"
 
-	"github.com/charmbracelet/log"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/charmbracelet/log"
 )
 
 var (
@@ -146,7 +145,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	document := &data.Document{
 		User_id:   user.User_id,
 		Filetype:  ".pdf",
-		Title:     file_data.Filename,
+		Title:     user.Username + "_" + file_data.Filename,
 		Tags:      input.Tags,
 		Is_hidden: input.Is_hidden,
 	}

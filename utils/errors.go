@@ -23,6 +23,10 @@ func ServerErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	errorResponse(w, r, http.StatusInternalServerError, message)
 }
 
+func FailedValidationResponseValidator(w http.ResponseWriter, r *http.Request, err error) {
+	errorResponse(w, r, http.StatusUnprocessableEntity, err.Error())
+}
+
 func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 	errorResponse(w, r, http.StatusBadRequest, err.Error())
 }

@@ -91,6 +91,11 @@ func ReadMultipartJSON(w http.ResponseWriter, r *http.Request, source interface{
 		return nil, nil, err
 	}
 
+	extension := file_data.Filename[len(file_data.Filename)-4:]
+	if extension != ".pdf" {
+		return nil, nil, errors.New("invalid file format, for now Viadro only accepts PDF files")
+	}
+
 	return file, file_data, nil
 }
 

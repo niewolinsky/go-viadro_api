@@ -7,6 +7,8 @@ import (
 	"viadro_api/internal/data"
 	"viadro_api/internal/mail"
 	"viadro_api/utils"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // Register a new user
@@ -23,14 +25,21 @@ import (
 //	@Router       /user [post]
 func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Username string `validate:"required,alphanum" json:"username"`
+		Email    string `validate:"required,email" json:"email"`
+		Password string `validate:"required,alphanumunicode" json:"password"`
 	}{}
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
 		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
+		return
+	}
+
+	validate := validator.New()
+	err = validate.Struct(input)
+	if err != nil {
+		utils.FailedValidationResponseValidator(w, r, err)
 		return
 	}
 
@@ -104,12 +113,19 @@ func (app *application) userRegisterHandler(w http.ResponseWriter, r *http.Reque
 //	@Router       /user/activate [put]
 func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
-		TokenPlaintext string `json:"token"`
+		TokenPlaintext string `validate:"required,alphanumunicode" json:"token"`
 	}{}
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
 		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
+		return
+	}
+
+	validate := validator.New()
+	err = validate.Struct(input)
+	if err != nil {
+		utils.FailedValidationResponseValidator(w, r, err)
 		return
 	}
 
@@ -158,13 +174,20 @@ func (app *application) userActivateHandler(w http.ResponseWriter, r *http.Reque
 //	@Router       /user/authenticate [put]
 func (app *application) userAuthenticateHandler(w http.ResponseWriter, r *http.Request) {
 	input := struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `validate:"required,email" json:"email"`
+		Password string `validate:"required,alphanumunicode" json:"password"`
 	}{}
 
 	err := utils.ReadJSON(w, r, &input)
 	if err != nil {
 		utils.BadRequestResponse(w, r, err) //? http.StatusBadRequest - 400
+		return
+	}
+
+	validate := validator.New()
+	err = validate.Struct(input)
+	if err != nil {
+		utils.FailedValidationResponseValidator(w, r, err)
 		return
 	}
 
