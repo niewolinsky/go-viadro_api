@@ -21,7 +21,7 @@ import (
 //	@Failure      422  {string}  "Invalid or expired token"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /admin/user/:id [patch]
-func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) adminGrantPrivilegesHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r) //? http.NotFoundResponse - 404
@@ -66,7 +66,7 @@ func (app *application) toggleAdminGrantHandler(w http.ResponseWriter, r *http.R
 //	@Failure      422  {string}  "Invalid or expired token"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /admin/users [get]
-func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) adminGetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	users, err := app.data_access.Users.GetAll()
 	if err != nil {
 		utils.ServerErrorResponse(w, r, err) //? http.StatusInternalServerError - 500
@@ -90,7 +90,7 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 //	@Failure      422  {string}  "Invalid or expired token"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /admin/documents [put]
-func (app *application) getAllDocumentsAdminHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) adminGetAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
 
 	input := struct {

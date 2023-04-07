@@ -30,7 +30,7 @@ var (
 //	@Success      200  {object}   data.Document
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /documents [get]
-func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) documentGetAllHandler(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
 	if len(qs) == 0 {
 		cachedResponse, err := app.redis_client.Get(context.TODO(), "defaultValues").Result()
@@ -127,7 +127,7 @@ func (app *application) getAllDocumentsHandler(w http.ResponseWriter, r *http.Re
 //	@Failure      401  {string}  "Unauthorized"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /document [post]
-func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) documentAddHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Tags      []string `json:"tags"`
 		Is_hidden bool     `json:"is_hidden"`
@@ -176,7 +176,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	headers := http.Header{}
-	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", document.Document_id))
+	headers.Set("Location", fmt.Sprintf("/v1/document/%d", document.Document_id))
 
 	err = utils.WriteJSON(w, http.StatusCreated, utils.Wrap{"document": document}, headers)
 	if err != nil {
@@ -200,7 +200,7 @@ func (app *application) addDocumentHandler(w http.ResponseWriter, r *http.Reques
 //	@Failure      404  {string}  "Not found"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /document/:id [delete]
-func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) documentDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
@@ -257,7 +257,7 @@ func (app *application) deleteDocumentHandler(w http.ResponseWriter, r *http.Req
 //	@Failure      404  {string}  "Not found"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /document/:id [get]
-func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) documentGetHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
@@ -299,7 +299,7 @@ func (app *application) getDocumentHandler(w http.ResponseWriter, r *http.Reques
 //	@Failure      404  {string}  "Not found"
 //	@Failure      500  {string}  "Internal server error"
 //	@Router       /document/:id [patch]
-func (app *application) toggleDocumentVisibilityHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) documentToggleVisibilityHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := utils.ReadIDParam(r)
 	if err != nil {
 		utils.NotFoundResponse(w, r) //? http.StatusNotFound - 404
